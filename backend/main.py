@@ -102,8 +102,8 @@ app = FastAPI(
 # CORS — Mini App (Vercel) uchun
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Production'da aniq Vercel URL qo'ying
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # If using allow_origins=["*"], allow_credentials must be False
     allow_methods=["*"],
     allow_headers=["*"],
 )
