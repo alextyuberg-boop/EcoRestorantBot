@@ -1,6 +1,8 @@
 import axios from 'axios';
 import WebApp from '@twa-dev/sdk';
 
+const tg = (WebApp as any).default || WebApp;
+
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const api = axios.create({
@@ -18,7 +20,7 @@ api.interceptors.request.use((config) => {
 
 export const authenticateWithTelegram = async () => {
   try {
-    const initData = WebApp.initData;
+    const initData = tg.initData;
     if (!initData) {
       console.warn("No initData found (Not in Telegram Environment)");
       // Bypass for testing purposes

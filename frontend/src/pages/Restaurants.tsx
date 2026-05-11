@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Loader2, UtensilsCrossed } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
+const tg = (WebApp as any).default || WebApp;
 import { api } from '../api';
 
 export default function Restaurants() {
@@ -46,7 +47,7 @@ export default function Restaurants() {
       setIsModalOpen(false);
       setRestaurantName('');
       setBotToken('');
-      WebApp.showAlert("Restoran muvaffaqiyatli qo'shildi!");
+      tg.showAlert("Restoran muvaffaqiyatli qo'shildi!");
       fetchRestaurants();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Xatolik yuz berdi. Bot tokenini tekshiring.");

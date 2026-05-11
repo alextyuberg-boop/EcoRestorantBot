@@ -4,12 +4,26 @@ import App from './App.tsx'
 import './index.css'
 import WebApp from '@twa-dev/sdk'
 
-// Initialize Telegram WebApp
-WebApp.ready();
-WebApp.expand();
+const tg = (WebApp as any).default || WebApp;
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+console.log("main.tsx: Script start");
+
+// Initialize Telegram WebApp
+try {
+  console.log("main.tsx: Initializing Telegram WebApp...");
+  tg.ready();
+  tg.expand();
+} catch (e) {
+  console.error("main.tsx: Telegram WebApp init failed", e);
+}
+
+console.log("main.tsx: Rendering React...");
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  console.error("main.tsx: Root element not found!");
+} else {
+  ReactDOM.createRoot(rootElement).render(
     <App />
-  </React.StrictMode>,
-)
+  );
+}
+
