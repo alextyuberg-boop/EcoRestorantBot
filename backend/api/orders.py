@@ -25,6 +25,7 @@ class CartItem(BaseModel):
 
 class OrderCreate(BaseModel):
     restaurant_id:    int
+    user_id:          int
     items:            List[CartItem]
     total_amount:     float
     phone:            Optional[str] = None
@@ -58,7 +59,7 @@ async def create_order(
 
     order = Order(
         restaurant_id    = body.restaurant_id,
-        user_id          = 0,  # Mini App'dan user_id keyin qo'shiladi
+        user_id          = body.user_id,
         status           = OrderStatus.new,
         items            = [item.model_dump() for item in body.items],
         total_amount     = body.total_amount,

@@ -1,11 +1,20 @@
 import { Component, useState, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { authenticateWithTelegram } from './api';
+import { HashRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { authenticateWithTelegram, getCustomerUser } from './api';
+
+// Admin Pages
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Restaurants from './pages/Restaurants';
 import Settings from './pages/Settings';
+
+// Customer Pages
+import CustomerLayout from './pages/customer/CustomerLayout';
+import CustomerMenu from './pages/customer/Menu';
+import CustomerCart from './pages/customer/Cart';
+import CustomerCheckout from './pages/customer/Checkout';
+import OrderStatus from './pages/customer/OrderStatus';
 
 /* ─── Error Boundary ────────────────────────────── */
 class ErrorBoundary extends Component<
@@ -63,7 +72,6 @@ function SplashScreen({ apiUrl }: { apiUrl: string }) {
       alignItems: 'center', justifyContent: 'center',
       minHeight: '100vh', background: '#000000', gap: 16,
     }}>
-      {/* Logo */}
       <div className="logo-icon" style={{
         width: 80, height: 80,
         borderRadius: 20,
@@ -77,7 +85,6 @@ function SplashScreen({ apiUrl }: { apiUrl: string }) {
         </svg>
       </div>
 
-      {/* Brand name */}
       <div style={{
         fontFamily: 'var(--font-display, sans-serif)',
         fontWeight: 800,
@@ -89,7 +96,6 @@ function SplashScreen({ apiUrl }: { apiUrl: string }) {
         EcoRestaurant
       </div>
 
-      {/* Progress bar */}
       <div style={{
         width: 160, height: 2,
         background: '#1A1A1A',
@@ -104,14 +110,6 @@ function SplashScreen({ apiUrl }: { apiUrl: string }) {
           animation: 'progress-line 1.5s ease-in-out infinite alternate',
           width: '60%',
         }} />
-      </div>
-
-      {/* API debug */}
-      <div style={{
-        fontFamily: 'monospace', fontSize: 10,
-        color: '#333', marginTop: 20,
-      }}>
-        API: {apiUrl}
       </div>
     </div>
   );
@@ -149,35 +147,43 @@ function ErrorScreen({ error, apiUrl }: { error: string; apiUrl: string }) {
         <p style={{ fontSize: 12, color: '#555' }}>
           Ilovani Telegram orqali ochganingizga ishonch hosil qiling.
         </p>
-        <div style={{
-          marginTop: 16, padding: '10px 14px',
-          background: '#0A0A0A', borderRadius: 10,
-          fontFamily: 'monospace', fontSize: 11, color: '#444',
-          wordBreak: 'break-all',
-        }}>
-          API: {apiUrl}
-        </div>
       </div>
     </div>
   );
 }
 
-/* ─── App ───────────────────────────────────────── */
-export default function App() {
-  const [user, setUser]       = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
+/* ─── App Logic ─────────────────────────────────── */
+function AppRouter() {
+  const [searchParams] = useSearchParams();
+  const restaurantId = searchParams.get('restaurant_id');
 
+  // Owner State
+  const [owner, setOwner] = useState<any>(null);
+  
+  // App State
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
   const apiUrl = import.meta.env.VITE_API_URL || 'localhost:8000';
 
   useEffect(() => {
     (async () => {
       try {
-        const userData = await authenticateWithTelegram();
-        if (userData) {
-          setUser(userData);
+        if (restaurantId) {
+          // If accessing as a Customer, we don't need full Owner JWT auth right now.
+          // We just need the Telegram user data from initDataUnsafe
+          const customerUser = getCustomerUser();
+          if (!customerUser) {
+             setError('Telegram orqali kirish tasdiqlanmadi.');
+          }
         } else {
-          setError('Telegram orqali avtorizatsiya amalga oshmadi.');
+          // Admin Mode - needs JWT auth
+          const userData = await authenticateWithTelegram();
+          if (userData) {
+            setOwner(userData);
+          } else {
+            setError('Telegram orqali avtorizatsiya amalga oshmadi.');
+          }
         }
       } catch (err: any) {
         setError(err.message || 'Server bilan ulanishda xatolik yuz berdi.');
@@ -185,22 +191,44 @@ export default function App() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [restaurantId]);
 
   if (loading) return <SplashScreen apiUrl={apiUrl} />;
-  if (error && !user) return <ErrorScreen error={error} apiUrl={apiUrl} />;
+  if (error && !owner && !restaurantId) return <ErrorScreen error={error} apiUrl={apiUrl} />;
 
+  if (restaurantId) {
+    // ──────── CUSTOMER APP ────────
+    return (
+      <Routes>
+        <Route path="/" element={<CustomerLayout />}>
+          <Route index element={<CustomerMenu restaurantId={parseInt(restaurantId)} />} />
+          <Route path="cart" element={<CustomerCart restaurantId={parseInt(restaurantId)} />} />
+          <Route path="checkout" element={<CustomerCheckout restaurantId={parseInt(restaurantId)} />} />
+          <Route path="status/:orderId" element={<OrderStatus />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    );
+  }
+
+  // ──────── OWNER APP ────────
+  return (
+    <Routes>
+      <Route path="/" element={<Layout user={owner} />}>
+        <Route index element={<Dashboard user={owner} />} />
+        <Route path="restaurants" element={<Restaurants />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
+export default function App() {
   return (
     <ErrorBoundary>
       <HashRouter>
-        <Routes>
-          <Route path="/" element={<Layout user={user} />}>
-            <Route index element={<Dashboard user={user} />} />
-            <Route path="restaurants" element={<Restaurants />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
+        <AppRouter />
       </HashRouter>
     </ErrorBoundary>
   );

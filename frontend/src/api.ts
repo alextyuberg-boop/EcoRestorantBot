@@ -21,6 +21,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Admin Auth
 export const authenticateWithTelegram = async () => {
   try {
     const initData = tg.initData;
@@ -50,4 +51,29 @@ export const authenticateWithTelegram = async () => {
     console.error("General Auth Error:", error.message);
     throw error;
   }
+};
+
+// ==========================================
+// CUSTOMER API
+// ==========================================
+
+export const getCustomerUser = () => {
+  if (tg.initDataUnsafe?.user) {
+    return tg.initDataUnsafe.user;
+  }
+  return { id: 123456789, first_name: 'Test', last_name: 'Customer' };
+}
+
+export const getCustomerMenu = async (restaurantId: number) => {
+  const response = await api.get(`/api/menu/${restaurantId}`);
+  return response.data;
+};
+
+export const createOrder = async (orderData: any) => {
+  const response = await api.post('/api/orders/create', orderData);
+  return response.data;
+};
+
+export const closeWebApp = () => {
+  tg.close();
 };

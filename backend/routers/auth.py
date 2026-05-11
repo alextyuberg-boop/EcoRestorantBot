@@ -124,6 +124,66 @@ async def login_via_telegram(request: TelegramAuthRequest, db: AsyncSession = De
         }
     }
 
+class CustomerAuthRequest(BaseModel):
+    initData: str
+    restaurant_id: int
+
+@router.post("/customer", response_model=TokenResponse)
+async def login_customer_via_telegram(request: CustomerAuthRequest, db: AsyncSession = Depends(get_db)):
+    from models import Restaurant, User
+    
+    # Get the restaurant to find its bot token
+    result = await db.execute(select(Restaurant).where(Restaurant.id == request.restaurant_id))
+    restaurant = result.scalars().first()
+    
+    if not restaurant or not restaurant.is_active:
+        raise HTTPException(status_code=404, detail="Restaurant not found or inactive")
+        
+    bot_token = restaurant.bot_token
+    user_data = verify_telegram_web_app_data(request.initData, bot_token)
+    
+    if not user_data or "id" not in user_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Telegram authentication data for customer",
+        )
+        
+    telegram_id = user_data["id"]
+    
+    # Check if user exists
+    user_r = await db.execute(select(User).where(User.telegram_id == telegram_id))
+    user = user_r.scalars().first()
+    
+    if not user:
+        from models import UserLanguage
+        user = User(
+            telegram_id=telegram_id,
+            full_name=f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip() or "Unknown",
+            restaurant_id=restaurant.id,
+            language=UserLanguage.uz
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        
+    # Generate JWT
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.telegram_id), "role": "customer", "restaurant_id": restaurant.id}, 
+        expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "telegram_id": user.telegram_id,
+            "full_name": user.full_name,
+            "restaurant_id": user.restaurant_id,
+            "balance": "0.00" # Users don't have balance in the model right now
+        }
+    }
+
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer()
@@ -132,6 +192,8 @@ async def get_current_owner(credentials: HTTPAuthorizationCredentials = Depends(
     token = credentials.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("role") != "owner":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an owner")
         telegram_id_str: str = payload.get("sub")
         if telegram_id_str is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
@@ -145,3 +207,24 @@ async def get_current_owner(credentials: HTTPAuthorizationCredentials = Depends(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Owner not found")
         
     return owner
+
+async def get_current_customer(credentials: HTTPAuthorizationCredentials = Depends(security), db: AsyncSession = Depends(get_db)):
+    from models import User
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("role") != "customer":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a customer")
+        telegram_id_str: str = payload.get("sub")
+        if telegram_id_str is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        telegram_id = int(telegram_id_str)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+        
+    result = await db.execute(select(User).where(User.telegram_id == telegram_id))
+    user = result.scalars().first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        
+    return user
