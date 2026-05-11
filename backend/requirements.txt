@@ -9,3 +9,4 @@ pydantic-settings
 # paytechuz[fastapi] removed, will implement gateways manually
 python-dotenv
 aiohttp
+PyJWT
