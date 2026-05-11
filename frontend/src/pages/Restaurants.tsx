@@ -1,130 +1,183 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Loader2, UtensilsCrossed, ExternalLink, Trash2, MapPin } from 'lucide-react';
+import { Plus, X, Loader2, UtensilsCrossed, Trash2, ExternalLink, MapPin } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 const tg = (WebApp as any).default || WebApp;
 import { api } from '../api';
 
 export default function Restaurants() {
   const [restaurants, setRestaurants] = useState<any[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen]   = useState(false);
   const [restaurantName, setRestaurantName] = useState('');
-  const [botToken, setBotToken] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState('');
+  const [botToken, setBotToken]         = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [fetching, setFetching]         = useState(true);
+  const [error, setError]               = useState('');
 
   const fetchRestaurants = async () => {
     try {
       setFetching(true);
-      const response = await api.get('/api/restaurants/');
-      setRestaurants(response.data);
+      const res = await api.get('/api/restaurants/');
+      setRestaurants(res.data);
     } catch (err) {
-      console.error("Failed to fetch restaurants:", err);
+      console.error('Failed to fetch restaurants:', err);
     } finally {
       setFetching(false);
     }
   };
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
+  useEffect(() => { fetchRestaurants(); }, []);
 
-  const handleAddRestaurant = async (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!restaurantName || !botToken) {
-      setError('Iltimos, barcha maydonlarni to\'ldiring');
-      return;
-    }
-    
-    setLoading(true);
     setError('');
-    
+    setLoading(true);
     try {
-      await api.post(`/api/restaurants/`, {
-        name: restaurantName,
-        bot_token: botToken
-      });
-      
+      await api.post('/api/restaurants/', { name: restaurantName, bot_token: botToken });
       setIsModalOpen(false);
       setRestaurantName('');
       setBotToken('');
       tg.showAlert("Restoran muvaffaqiyatli qo'shildi!");
       fetchRestaurants();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Xatolik yuz berdi. Bot tokenini tekshiring.");
+      setError(err.response?.data?.detail || 'Xatolik yuz berdi. Bot tokenini tekshiring.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold tracking-tight">Restoranlarim</h2>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="!py-2 !px-4 !text-xs !rounded-xl !bg-primary/20 !text-primary !shadow-none hover:!bg-primary/30"
-        >
-          <Plus size={16} />
-          Qo'shish
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--color-text)' }}>
+            Restoranlarim
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginTop: 2 }}>
+            {restaurants.length} ta restoran
+          </p>
+        </div>
+        <button onClick={() => setIsModalOpen(true)} style={{
+          padding: '10px 16px',
+          fontSize: 13,
+          borderRadius: 'var(--radius-md)',
+          fontWeight: 700,
+        }}>
+          <Plus size={16} /> Qo'shish
         </button>
       </div>
 
-      {fetching && restaurants.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 opacity-40">
-          <Loader2 className="animate-spin text-primary w-10 h-10 mb-4" />
-          <p className="label-muted">Yuklanmoqda...</p>
+      {/* ── List ── */}
+      {fetching ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1, 2].map(i => (
+            <div key={i} className="skeleton" style={{ height: 88, borderRadius: 'var(--radius-lg)' }} />
+          ))}
         </div>
       ) : restaurants.length === 0 ? (
-        <div className="glass-card !py-12 text-center border-dashed border-white/10">
-          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <UtensilsCrossed className="text-text-dark" size={32} />
+        <div style={{
+          textAlign: 'center',
+          padding: '48px 24px',
+          background: 'var(--color-surface)',
+          border: '1px dashed var(--color-border)',
+          borderRadius: 'var(--radius-xl)',
+        }}>
+          <div style={{
+            width: 64, height: 64, margin: '0 auto 16px',
+            borderRadius: '50%',
+            background: 'var(--color-surface-2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--color-text-3)',
+          }}>
+            <UtensilsCrossed size={28} />
           </div>
-          <p className="text-dim text-sm mb-6">Sizda hali restoranlar yo'q</p>
-          <button onClick={() => setIsModalOpen(true)} className="mx-auto !text-sm">
+          <p style={{ color: 'var(--color-text-3)', fontSize: 14, marginBottom: 20 }}>
+            Sizda hali restoranlar yo'q
+          </p>
+          <button onClick={() => setIsModalOpen(true)} style={{ fontSize: 14, padding: '12px 24px' }}>
             Birinchi restoranni qo'shish
           </button>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {restaurants.map((res) => (
-            <div key={res.id} className="glass-card !p-5 group">
-              <div className="flex items-start justify-between">
-                <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                    <UtensilsCrossed size={24} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {restaurants.map((res, idx) => (
+            <div
+              key={res.id}
+              className="card"
+              style={{
+                padding: 16,
+                animationDelay: `${idx * 80}ms`,
+                animationFillMode: 'both',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                {/* Icon */}
+                <div style={{
+                  width: 48, height: 48,
+                  borderRadius: 12,
+                  background: 'rgba(0,229,97,0.1)',
+                  border: '1px solid rgba(0,229,97,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--color-primary)',
+                  flexShrink: 0,
+                }}>
+                  <UtensilsCrossed size={22} />
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700, fontSize: 16,
+                    color: 'var(--color-text)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {res.name}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg leading-none mb-1.5">{res.name}</h3>
-                    <div className="flex items-center gap-1.5 text-dim">
-                      <MapPin size={12} />
-                      <span className="text-[10px] uppercase font-semibold tracking-wider">@{res.bot_username || 'eco_bot'}</span>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                    <MapPin size={11} color="var(--color-text-3)" />
+                    <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>
+                      @{res.bot_username || 'eco_bot'}
+                    </span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button className="!p-2 !w-9 !h-9 !rounded-lg !bg-white/5 !shadow-none hover:!bg-white/10 !text-dim">
-                    <ExternalLink size={16} />
-                  </button>
-                  <button className="!p-2 !w-9 !h-9 !rounded-lg !bg-red-500/5 !shadow-none hover:!bg-red-500/20 !text-red-400">
-                    <Trash2 size={16} />
-                  </button>
+
+                {/* Status + Actions */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                  <span className="badge badge-online">Online</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn-icon" style={{ width: 32, height: 32 }}>
+                      <ExternalLink size={14} />
+                    </button>
+                    <button className="btn-danger btn-icon" style={{
+                      width: 32, height: 32,
+                      background: 'rgba(255,68,68,0.06)',
+                      borderRadius: 'var(--radius-sm)',
+                    }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
-              
-              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                <div className="flex -space-x-2">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="w-6 h-6 rounded-full border-2 border-bg-deep bg-white/10 flex items-center justify-center text-[8px] font-bold">
-                      {i}
-                    </div>
-                  ))}
-                  <div className="pl-4 text-[10px] text-dim font-medium uppercase tracking-tighter self-center">
-                    Faol holatda
-                  </div>
-                </div>
-                <span className="px-2 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest">
-                  Online
+
+              {/* Footer strip */}
+              <div style={{
+                marginTop: 14,
+                paddingTop: 12,
+                borderTop: '1px solid var(--color-border)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>
+                  0 ta buyurtma bugun
+                </span>
+                <span style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--color-primary)',
+                }}>
+                  0 UZS
                 </span>
               </div>
             </div>
@@ -132,48 +185,92 @@ export default function Restaurants() {
         </div>
       )}
 
-      {/* Modern Modal */}
+      {/* ── Modal ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="glass-card w-full max-w-md relative z-10 animate-slide-up !p-8 border-white/10">
-            <div className="flex justify-between items-center mb-6">
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          display: 'flex', alignItems: 'flex-end',
+          padding: '0 0 env(safe-area-inset-bottom)',
+        }}
+          className="animate-fade"
+        >
+          {/* Overlay */}
+          <div
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+            onClick={() => setIsModalOpen(false)}
+          />
+
+          {/* Sheet */}
+          <div style={{
+            position: 'relative', zIndex: 1,
+            width: '100%', maxWidth: 480, margin: '0 auto',
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderBottom: 'none',
+            borderRadius: '24px 24px 0 0',
+            padding: '28px 20px 36px',
+          }}>
+            {/* Handle */}
+            <div style={{
+              width: 36, height: 4,
+              borderRadius: 2,
+              background: 'var(--color-border)',
+              margin: '0 auto 24px',
+            }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
               <div>
-                <h3 className="text-2xl font-bold">Yangi Restoran</h3>
-                <p className="text-sm text-dim">Filial ma'lumotlarini kiriting</p>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700 }}>
+                  Yangi Restoran
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginTop: 4 }}>
+                  Bot va restoran ma'lumotlarini kiriting
+                </p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="!p-2 !w-10 !h-10 !rounded-full !bg-white/5 !text-dim hover:!text-white">
-                <X size={20} />
+              <button className="btn-icon" onClick={() => setIsModalOpen(false)}>
+                <X size={18} />
               </button>
             </div>
-            
-            <form onSubmit={handleAddRestaurant} className="space-y-6">
-              <div className="space-y-2">
-                <label className="label-muted px-1">Restoran Nomi</label>
-                <input 
-                  type="text" 
+
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>
+                  Restoran Nomi
+                </label>
+                <input
+                  type="text"
                   placeholder="Masalan: Rayhon Milliy Taomlar"
                   value={restaurantName}
                   onChange={(e) => setRestaurantName(e.target.value)}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <label className="label-muted px-1">Telegram Bot Token</label>
-                <input 
-                  type="password" 
-                  placeholder="BotFather dan olingan token"
+              <div>
+                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>
+                  Telegram Bot Token
+                </label>
+                <input
+                  type="password"
+                  placeholder="@BotFather'dan olingan token"
                   value={botToken}
                   onChange={(e) => setBotToken(e.target.value)}
                   required
                 />
-                <p className="text-[10px] text-dim px-1 italic">
-                  * Har bir restoran uchun alohida bot ochish tavsiya etiladi
+                <p style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 6 }}>
+                  * Har bir restoran uchun alohida bot tavsiya etiladi
                 </p>
               </div>
-              {error && <p className="text-red-400 text-xs px-1 font-medium">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full">
-                {loading ? <Loader2 className="animate-spin" /> : 'Saqlash va Ulanish'}
+
+              {error && (
+                <p style={{ color: '#FF4444', fontSize: 13, fontWeight: 500 }}>{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{ width: '100%', marginTop: 8, padding: '15px 24px' }}
+              >
+                {loading ? <Loader2 size={20} className="animate-spin" /> : 'Saqlash va Ulanish'}
               </button>
             </form>
           </div>

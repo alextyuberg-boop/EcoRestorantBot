@@ -1,20 +1,56 @@
 <!doctype html>
-<html lang="en">
+<html lang="uz">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <title>EcoRestorant Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="description" content="EcoRestaurant — Telegram orqali restoran boshqaruv platformasi" />
+    <title>EcoRestaurant Admin</title>
   </head>
   <body>
     <div id="root">
-      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #94A3B8; font-family: sans-serif;">
-        Dastur yuklanmoqda...
+      <div style="
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        height: 100vh; background: #0A0A0A; gap: 16px;
+      ">
+        <!-- Animated logo placeholder -->
+        <div style="
+          width: 64px; height: 64px; border-radius: 16px;
+          background: #00E561;
+          display: flex; align-items: center; justify-content: center;
+          animation: pulse 1.5s ease-in-out infinite;
+        ">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+            <path d="M12 21V12M12 12C12 12 8 10 8 5C8 3 9.5 2 11 2C12.5 2 12 3.5 12 5" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 12C12 12 14 9.5 16 8C17.5 6.8 19 7 19 9C19 11 16 12 12 12" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+            <path d="M15 21L15 17M13 21L13 17M17 21L17 17M13 17H17" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div style="font-family: sans-serif; font-size: 18px; font-weight: 700; color: #00E561; letter-spacing: -0.02em;">
+          EcoRestaurant
+        </div>
+        <!-- Progress bar -->
+        <div style="width: 120px; height: 2px; background: #1A1A1A; border-radius: 1px; overflow: hidden;">
+          <div style="
+            height: 100%; background: #00E561;
+            animation: progress 1.5s ease-in-out infinite;
+            width: 60%;
+          "></div>
+        </div>
       </div>
     </div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(0,229,97,0.3); }
+        50% { box-shadow: 0 0 32px rgba(0,229,97,0.7); }
+      }
+      @keyframes progress {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(200%); }
+      }
+    </style>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
