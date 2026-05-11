@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+aiogram
+SQLAlchemy
+asyncpg
+alembic
+pydantic
+pydantic-settings
+# paytechuz[fastapi] removed, will implement gateways manually
+python-dotenv
+aiohttp
