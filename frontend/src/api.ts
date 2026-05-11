@@ -21,8 +21,13 @@ export const authenticateWithTelegram = async () => {
     const initData = WebApp.initData;
     if (!initData) {
       console.warn("No initData found (Not in Telegram Environment)");
-      // For testing outside telegram, you might return mock data or throw
-      return null;
+      // Bypass for testing purposes
+      return { 
+        id: 0, 
+        full_name: "Test Foydalanuvchi", 
+        balance: "100.00",
+        telegram_id: 123456
+      };
     }
     
     const response = await api.post('/api/auth/telegram', { initData });

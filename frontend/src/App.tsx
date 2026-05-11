@@ -68,7 +68,11 @@ function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--bg-darker)]">
         <Loader2 className="animate-spin text-primary w-12 h-12 mb-4" />
-        <p className="text-[#94A3B8]">Tizimga kirilmoqda...</p>
+        <p className="text-[#94A3B8] font-medium">EcoRestorant Bot</p>
+        <p className="text-xs text-[#94A3B8]/60 mt-2">Tizimga kirilmoqda...</p>
+        <div className="mt-8 p-3 bg-black/20 rounded-lg border border-white/5 text-[10px] text-[#64748B] font-mono">
+          API: {import.meta.env.VITE_API_URL || 'http://localhost:8000'}
+        </div>
       </div>
     );
   }
