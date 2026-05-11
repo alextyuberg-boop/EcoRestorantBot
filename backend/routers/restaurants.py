@@ -1,0 +1,52 @@
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from database import get_db
+from models import Restaurant, RestaurantOwner
+from schemas import RestaurantCreate, RestaurantResponse
+from .auth import get_current_owner
+
+router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
+
+@router.get("/", response_model=List[RestaurantResponse])
+async def get_my_restaurants(
+    owner: RestaurantOwner = Depends(get_current_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Restaurant).where(Restaurant.owner_id == owner.telegram_id))
+    restaurants = result.scalars().all()
+    return restaurants
+
+from aiogram import Bot
+
+@router.post("/", response_model=RestaurantResponse)
+async def create_restaurant(
+    restaurant_data: RestaurantCreate,
+    owner: RestaurantOwner = Depends(get_current_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify bot token
+    try:
+        temp_bot = Bot(token=restaurant_data.bot_token)
+        bot_info = await temp_bot.get_me()
+        await temp_bot.session.close()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid bot token")
+        
+    # Check if a restaurant with the same bot_token exists
+    result = await db.execute(select(Restaurant).where(Restaurant.bot_token == restaurant_data.bot_token))
+    if result.scalars().first():
+        raise HTTPException(status_code=400, detail="Bot token already in use")
+        
+    new_restaurant = Restaurant(
+        owner_id=owner.telegram_id,
+        name=restaurant_data.name,
+        bot_token=restaurant_data.bot_token,
+        bot_username=bot_info.username
+    )
+    db.add(new_restaurant)
+    await db.commit()
+    await db.refresh(new_restaurant)
+    return new_restaurant

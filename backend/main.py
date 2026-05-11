@@ -79,49 +79,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="EcoRestaurant Platform", lifespan=lifespan)
 
-# CORS Configuration
+# Enable CORS for the frontend Mini App
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with actual frontend URL
+    allow_origins=["*"],  # In production, specify the vercel URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(restaurants.router)
+
 @app.get("/")
 async def root():
     return {"message": "EcoRestaurant API is running"}
 
-@app.post("/api/restaurants", response_model=schemas.RestaurantResponse)
-async def create_restaurant(restaurant: schemas.RestaurantCreate, db: AsyncSession = Depends(get_db)):
-    # Verify bot token
-    try:
-        temp_bot = Bot(token=restaurant.bot_token)
-        bot_info = await temp_bot.get_me()
-        await temp_bot.session.close()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Invalid bot token")
-    
-    # Check if owner exists
-    stmt = select(models.RestaurantOwner).where(models.RestaurantOwner.telegram_id == restaurant.owner_id)
-    result = await db.execute(stmt)
-    owner = result.scalar_one_or_none()
-    if not owner:
-        raise HTTPException(status_code=404, detail="Owner not found. Please start the bot first.")
 
-    # Create restaurant
-    db_restaurant = models.Restaurant(
-        owner_id=restaurant.owner_id,
-        name=restaurant.name,
-        bot_token=restaurant.bot_token,
-        bot_username=bot_info.username
-    )
-    db.add(db_restaurant)
-    try:
-        await db.commit()
-        await db.refresh(db_restaurant)
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail="Bot token might already be in use")
-        
-    return db_restaurant
