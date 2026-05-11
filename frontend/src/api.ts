@@ -46,4 +46,8 @@ export const authenticateWithTelegram = async () => {
       console.error("Auth failed:", errorDetail);
       throw new Error(errorDetail);
     }
+  } catch (error: any) {
+    console.error("General Auth Error:", error.message);
+    throw error;
+  }
 };
