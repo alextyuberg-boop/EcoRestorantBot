@@ -3,7 +3,10 @@ import WebApp from '@twa-dev/sdk';
 
 const tg = (WebApp as any).default || WebApp;
 
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+if (apiUrl && !apiUrl.startsWith('http')) {
+  apiUrl = `https://${apiUrl}`;
+}
 
 export const api = axios.create({
   baseURL: apiUrl,
