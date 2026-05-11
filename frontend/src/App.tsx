@@ -1,7 +1,12 @@
-import { Component } from 'react';
+import { Component, useState, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { authenticateWithTelegram } from './api';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import Restaurants from './pages/Restaurants';
+import Settings from './pages/Settings';
 
 class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: {children: ReactNode}) {
@@ -32,15 +37,8 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
   }
 }
 
-import { Loader2 } from 'lucide-react';
-import { authenticateWithTelegram } from './api';
-
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Restaurants from './pages/Restaurants';
-import Settings from './pages/Settings';
-
 function App() {
+  console.log("EcoRestorant: App initializing...");
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
