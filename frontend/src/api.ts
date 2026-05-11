@@ -27,6 +27,7 @@ export const authenticateWithTelegram = async () => {
     if (!initData) {
       console.warn("No initData found (Not in Telegram Environment)");
       // Bypass for testing purposes
+      localStorage.setItem('jwt_token', 'mock_test_token');
       return { 
         id: 0, 
         full_name: "Test Foydalanuvchi", 
@@ -35,14 +36,14 @@ export const authenticateWithTelegram = async () => {
       };
     }
     
-    const response = await api.post('/api/auth/telegram', { initData });
-    const { access_token, user } = response.data;
-    
-    // Save token
-    localStorage.setItem('jwt_token', access_token);
-    return user;
-  } catch (error) {
-    console.error("Auth failed:", error);
-    throw error;
-  }
+    try {
+      const response = await api.post('/api/auth/telegram', { initData });
+      const { access_token, user } = response.data;
+      localStorage.setItem('jwt_token', access_token);
+      return user;
+    } catch (error: any) {
+      const errorDetail = error.response?.data?.detail || error.message;
+      console.error("Auth failed:", errorDetail);
+      throw new Error(errorDetail);
+    }
 };

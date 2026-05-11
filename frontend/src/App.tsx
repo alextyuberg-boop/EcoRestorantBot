@@ -52,8 +52,8 @@ function App() {
         } else {
           setError("Telegram orqali avtorizatsiya amalga oshmadi.");
         }
-      } catch (err) {
-        setError("Server bilan ulanishda xatolik yuz berdi.");
+      } catch (err: any) {
+        setError(err.message || "Server bilan ulanishda xatolik yuz berdi.");
       } finally {
         setLoading(false);
       }
