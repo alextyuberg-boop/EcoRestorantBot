@@ -16,6 +16,7 @@ from sqlalchemy.future import select
 from database import async_session, get_db
 import models
 import schemas
+from routers import auth, restaurants
 
 load_dotenv()
 
