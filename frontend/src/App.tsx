@@ -83,6 +83,9 @@ function App() {
           <h2 className="text-xl font-bold text-red-400 mb-2">Xatolik</h2>
           <p className="text-[#94A3B8]">{error}</p>
           <p className="text-xs text-[#94A3B8] mt-4">Ilovani Telegram orqali ochganingizga ishonch hosil qiling.</p>
+          <div className="mt-8 p-3 bg-black/20 rounded-lg border border-red-500/10 text-[10px] text-[#64748B] font-mono">
+            Ulanish manzili: {import.meta.env.VITE_API_URL || 'http://localhost:8000'}
+          </div>
         </div>
       </div>
     );
