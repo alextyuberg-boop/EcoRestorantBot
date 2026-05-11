@@ -1,6 +1,6 @@
 import { Component, useState, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { authenticateWithTelegram } from './api';
 import Layout from './components/Layout';
@@ -99,6 +99,7 @@ function App() {
             <Route index element={<Dashboard user={user} />} />
             <Route path="restaurants" element={<Restaurants />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </HashRouter>
