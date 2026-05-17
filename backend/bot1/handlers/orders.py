@@ -53,63 +53,19 @@ def _format_order(order: Order, user: User | None = None) -> str:
 @router.message(F.text.in_({"📦 Zakazlar", "📦 Заказы"}))
 async def show_orders(message: types.Message, state: FSMContext):
     await state.clear()
+    import os
+    mini_app_url = os.getenv("MINI_APP_URL", "https://yourapp.vercel.app")
 
-    async with async_session() as session:
-        # Eganing restoranlarini toping
-        owner_result = await session.execute(
-            select(RestaurantOwner).where(
-                RestaurantOwner.telegram_id == message.from_user.id
-            )
-        )
-        owner = owner_result.scalar_one_or_none()
-        if not owner:
-            await message.answer("❌ Profil topilmadi. /start bilan qayta kiring.")
-            return
-
-        # Barcha restoranlar uchun aktiv zakazlar
-        rest_result = await session.execute(
-            select(Restaurant).where(Restaurant.owner_id == owner.telegram_id)
-        )
-        restaurants = rest_result.scalars().all()
-
-        if not restaurants:
-            await message.answer(
-                "ℹ️ Sizda hali restoranlar yo'q.\n"
-                "Avval botingizni sozlang: <b>🤖 Botimni sozla</b>"
-            )
-            return
-
-        rest_ids = [r.id for r in restaurants]
-
-        # Aktiv zakazlar
-        active_statuses = [
-            OrderStatus.new, OrderStatus.confirmed,
-            OrderStatus.paid, OrderStatus.cooking, OrderStatus.delivery
-        ]
-        orders_result = await session.execute(
-            select(Order)
-            .where(
-                Order.restaurant_id.in_(rest_ids),
-                Order.status.in_(active_statuses)
-            )
-            .order_by(desc(Order.created_at))
-            .limit(20)
-        )
-        orders = orders_result.scalars().all()
-
-    if not orders:
-        await message.answer(
-            "📭 <b>Hozirda aktiv zakazlar yo'q.</b>\n\n"
-            "Yangi zakazlar kelganda bu yerda ko'rinadi.",
-        )
-        return
-
-    await message.answer(f"📦 <b>Aktiv zakazlar: {len(orders)} ta</b>")
-
-    for order in orders:
-        text = _format_order(order)
-        kb   = order_status_keyboard(order.id, order.status.value)
-        await message.answer(text, reply_markup=kb)
+    await message.answer(
+        "📦 <b>Buyurtmalar boshqaruvi</b>\n\n"
+        "Aktiv buyurtmalarni real-vaqtda ko'rish, tasdiqlash, tayyorlash va kuryerga topshirish uchun **Kabinet (Mini App)**'ga kiring 👇",
+        reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(
+                text="📱 Kabinetni ochish",
+                web_app=types.WebAppInfo(url=mini_app_url)
+            )]
+        ])
+    )
 
 
 # ── Status o'zgartirish ───────────────────────────────────────────────

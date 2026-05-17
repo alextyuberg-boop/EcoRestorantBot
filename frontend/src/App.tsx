@@ -65,7 +65,7 @@ class ErrorBoundary extends Component<
 }
 
 /* ─── Splash/Loading Screen ────────────────────── */
-function SplashScreen({ apiUrl }: { apiUrl: string }) {
+function SplashScreen() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
@@ -116,7 +116,7 @@ function SplashScreen({ apiUrl }: { apiUrl: string }) {
 }
 
 /* ─── Error Screen ─────────────────────────────── */
-function ErrorScreen({ error, apiUrl }: { error: string; apiUrl: string }) {
+function ErrorScreen({ error }: { error: string }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
@@ -164,7 +164,7 @@ function AppRouter() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const apiUrl = import.meta.env.VITE_API_URL || 'localhost:8000';
+
 
   useEffect(() => {
     (async () => {
@@ -193,8 +193,8 @@ function AppRouter() {
     })();
   }, [restaurantId]);
 
-  if (loading) return <SplashScreen apiUrl={apiUrl} />;
-  if (error && !owner && !restaurantId) return <ErrorScreen error={error} apiUrl={apiUrl} />;
+  if (loading) return <SplashScreen />;
+  if (error && !owner && !restaurantId) return <ErrorScreen error={error} />;
 
   if (restaurantId) {
     // ──────── CUSTOMER APP ────────

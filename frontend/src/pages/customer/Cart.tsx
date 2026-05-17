@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { ArrowLeft, Plus, Minus, Trash2 } from 'lucide-react';
 
-export default function Cart({ restaurantId }: { restaurantId: number }) {
+export default function Cart({ restaurantId: _restaurantId }: { restaurantId: number }) {
   const { cart, updateQuantity, removeFromCart, totalPrice, totalItems } = useCart();
   const navigate = useNavigate();
 

@@ -6,6 +6,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton,
     ReplyKeyboardRemove,
+    WebAppInfo,
 )
 
 
@@ -33,24 +34,18 @@ def phone_request_keyboard() -> ReplyKeyboardMarkup:
 
 # ── Asosiy menyu (Bot 1) ──────────────────────────────────────────────
 
-_MAIN_MENU_UZ = [
-    ["📦 Zakazlar",    "🍽 Menyu"],
-    ["💳 Karta ulash", "📊 Statistika"],
-    ["🤖 Botimni sozla"],
-    ["👤 Profil",      "⚙️ Sozlamalar"],
-]
-
-_MAIN_MENU_RU = [
-    ["📦 Заказы",      "🍽 Меню"],
-    ["💳 Привязать карту", "📊 Статистика"],
-    ["🤖 Настроить бота"],
-    ["👤 Профиль",     "⚙️ Настройки"],
-]
-
 def main_menu_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
-    buttons = _MAIN_MENU_RU if lang == "ru" else _MAIN_MENU_UZ
+    import os
+    mini_app_url = os.getenv("MINI_APP_URL", "https://yourapp.vercel.app")
+
+    btn_text = "📱 Kabinet (Mini App)" if lang != "ru" else "📱 Кабинет (Mini App)"
+    setup_text = "🤖 Botimni sozla" if lang != "ru" else "🤖 Настроить бота"
+
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=t) for t in row] for row in buttons],
+        keyboard=[
+            [KeyboardButton(text=btn_text, web_app=WebAppInfo(url=mini_app_url))],
+            [KeyboardButton(text=setup_text)]
+        ],
         resize_keyboard=True,
     )
 

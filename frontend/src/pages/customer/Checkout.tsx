@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
-import { createOrder, getCustomerUser, closeWebApp } from '../../api';
+import { createOrder, getCustomerUser } from '../../api';
 import { ArrowLeft, MapPin, Phone, CreditCard, Banknote } from 'lucide-react';
 
 export default function Checkout({ restaurantId }: { restaurantId: number }) {

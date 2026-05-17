@@ -37,29 +37,17 @@ async def get_owner_restaurant(tg_id: int) -> Restaurant | None:
 @router.message(F.text.in_({"🍽 Menyu", "🍽 Меню"}))
 async def show_menu_main(message: types.Message, state: FSMContext):
     await state.clear()
-    restaurant = await get_owner_restaurant(message.from_user.id)
-    if not restaurant:
-        await message.answer("❌ Avval botingizni sozlang: <b>🤖 Botimni sozla</b>")
-        return
-
-    async with async_session() as session:
-        cats_r = await session.execute(
-            select(MenuCategory)
-            .where(MenuCategory.restaurant_id == restaurant.id)
-            .order_by(MenuCategory.sort_order)
-        )
-        categories = cats_r.scalars().all()
-
-    cat_text = "\n".join(f"  📁 {c.name}" for c in categories) or "  (bo'sh)"
+    import os
+    mini_app_url = os.getenv("MINI_APP_URL", "https://yourapp.vercel.app")
 
     await message.answer(
-        f"🍽 <b>Menyu boshqaruvi</b>\n\n"
-        f"Kategoriyalar:\n{cat_text}\n\n"
-        f"Nima qilmoqchisiz?",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Kategoriya qo'sh",  callback_data="menu_add_cat")],
-            [InlineKeyboardButton(text="🍜 Taom qo'sh",        callback_data="menu_add_item")],
-            [InlineKeyboardButton(text="📋 Barcha taomlar",    callback_data="menu_list_items")],
+        "🍽 <b>Menyu va taomlar boshqaruvi</b>\n\n"
+        "Menyu kategoriyalarini va taomlarni qulay tarzda boshqarish, yangilarini qo'shish yoki narxlarini o'zgartirish uchun **Kabinet (Mini App)**'ga kiring 👇",
+        reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(
+                text="📱 Kabinetni ochish",
+                web_app=types.WebAppInfo(url=mini_app_url)
+            )]
         ])
     )
 

@@ -38,26 +38,19 @@ def _validate_card(card_number: str) -> bool:
 @router.message(F.text.in_({"💳 Karta ulash", "💳 Привязать карту"}))
 async def card_start(message: types.Message, state: FSMContext):
     await state.clear()
-
-    async with async_session() as session:
-        owner_r = await session.execute(
-            select(RestaurantOwner).where(
-                RestaurantOwner.telegram_id == message.from_user.id
-            )
-        )
-        owner = owner_r.scalar_one_or_none()
-
-    current_card = ""
-    if owner and owner.card_number:
-        current_card = f"\n\n✅ Hozirgi karta: <b>{_mask_card(owner.card_number)}</b>"
+    import os
+    mini_app_url = os.getenv("MINI_APP_URL", "https://yourapp.vercel.app")
 
     await message.answer(
-        f"💳 <b>Karta ulash</b>{current_card}\n\n"
-        "Karta raqamini kiriting (16 xona):\n"
-        "<i>Faqat raqam, boshqa ma'lumot so'RALMAYDI</i>",
-        reply_markup=cancel_keyboard()
+        "💳 <b>Karta ulash va to'lovlarni boshqarish</b>\n\n"
+        "Plastik kartangizni xavfsiz bog'lash, hisobni tekshirish va mablag'larni yechib olish uchun **Kabinet (Mini App)**'ga kiring 👇",
+        reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(
+                text="📱 Kabinetni ochish",
+                web_app=types.WebAppInfo(url=mini_app_url)
+            )]
+        ])
     )
-    await state.set_state(CardStates.card_number)
 
 
 # ── Karta raqamini qabul qilish ───────────────────────────────────────

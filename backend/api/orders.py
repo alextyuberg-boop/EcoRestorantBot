@@ -73,6 +73,67 @@ async def create_order(
     await db.commit()
     await db.refresh(order)
 
+    # ── Egaga va Mijozga Telegram Bildirishnomalarini yuborish ──
+    try:
+        import os
+        from aiogram import Bot
+        from bot_manager import active_bots
+        
+        # Restoranni va uning egasini yuklash
+        res_query = await db.execute(select(Restaurant).where(Restaurant.id == body.restaurant_id))
+        restaurant = res_query.scalar_one_or_none()
+        if restaurant:
+            # 1. Mijozga tasdiqlash xabarnomasi (restoran boti orqali)
+            cust_bot = None
+            if restaurant.bot_token in active_bots:
+                cust_bot = active_bots[restaurant.bot_token]
+            else:
+                cust_bot = Bot(token=restaurant.bot_token)
+            
+            confirm_msg = (
+                f"🎉 <b>Buyurtmangiz qabul qilindi!</b>\n\n"
+                f"📋 Buyurtma #{order.id}\n"
+                f"💰 Jami: <b>{float(order.total_amount):,.0f} so'm</b>\n"
+                f"💳 To'lov turi: {body.payment_type.upper() if body.payment_type else 'CASH'}\n\n"
+                f"Restoran tasdiqlagach xabar yuboriladi."
+            )
+            try:
+                await cust_bot.send_message(body.user_id, confirm_msg)
+            except Exception:
+                pass
+            finally:
+                if restaurant.bot_token not in active_bots:
+                    await cust_bot.session.close()
+
+            # 2. Restoran egasiga platform boti orqali bildirishnoma
+            platform_token = os.getenv("PLATFORM_BOT_TOKEN", "")
+            if platform_token:
+                platform_bot = None
+                if platform_token in active_bots:
+                    platform_bot = active_bots[platform_token]
+                else:
+                    platform_bot = Bot(token=platform_token)
+                
+                from bot_notifier import notify_owner_new_order
+                await notify_owner_new_order(
+                    platform_bot,
+                    restaurant.owner_id,
+                    {
+                        "id": order.id,
+                        "items": [item.model_dump() for item in body.items],
+                        "total_amount": float(order.total_amount),
+                        "phone": body.phone,
+                        "delivery_address": body.delivery_address,
+                        "location_lat": body.location_lat,
+                        "location_lon": body.location_lon,
+                        "payment_type": body.payment_type or "cash",
+                    }
+                )
+                if platform_token not in active_bots:
+                    await platform_bot.session.close()
+    except Exception:
+        pass
+
     return {"id": order.id, "status": order.status.value}
 
 
