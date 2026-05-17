@@ -58,7 +58,12 @@ async def lifespan(app: FastAPI):
     logger.info("Database jadvallari tekshirildi.")
 
     # 2. Bot 1 webhook o'rnatish
-    base_url = os.getenv("BASE_URL", "")
+    base_url = os.getenv("BASE_URL")
+    if not base_url:
+        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+        if railway_domain:
+            base_url = f"https://{railway_domain}"
+
     if base_url:
         webhook_url = f"{base_url}/bot1/webhook"
         await platform_bot.set_webhook(webhook_url)

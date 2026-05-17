@@ -45,9 +45,14 @@ async def validate_bot_token(token: str) -> Optional[dict]:
 
 async def set_bot_webhook(token: str) -> bool:
     """Bot uchun webhook URL o'rnatadi."""
-    base_url = os.getenv("BASE_URL", "")
+    base_url = os.getenv("BASE_URL")
     if not base_url:
-        logger.error("BASE_URL .env da topilmadi!")
+        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+        if railway_domain:
+            base_url = f"https://{railway_domain}"
+            
+    if not base_url:
+        logger.error("BASE_URL yoki RAILWAY_PUBLIC_DOMAIN topilmadi!")
         return False
 
     webhook_url = f"{base_url}/bot/{token}"
