@@ -155,7 +155,8 @@ function ErrorScreen({ error }: { error: string }) {
 /* ─── App Logic ─────────────────────────────────── */
 function AppRouter() {
   const [searchParams] = useSearchParams();
-  const restaurantId = searchParams.get('restaurant_id');
+  const urlParams = new URLSearchParams(window.location.search);
+  const restaurantId = searchParams.get('restaurant_id') || urlParams.get('restaurant_id');
 
   // App State
   const [user, setUser] = useState<any>(null);
