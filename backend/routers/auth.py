@@ -124,13 +124,13 @@ async def login_via_telegram(request: TelegramAuthRequest, db: AsyncSession = De
         }
     }
 
-class CustomerAuthRequest(BaseModel):
+class AppAuthRequest(BaseModel):
     initData: str
     restaurant_id: int
 
-@router.post("/customer", response_model=TokenResponse)
-async def login_customer_via_telegram(request: CustomerAuthRequest, db: AsyncSession = Depends(get_db)):
-    from models import Restaurant, User
+@router.post("/app", response_model=TokenResponse)
+async def login_app_via_telegram(request: AppAuthRequest, db: AsyncSession = Depends(get_db)):
+    from models import Restaurant, User, UserLanguage
     
     # Get the restaurant to find its bot token
     result = await db.execute(select(Restaurant).where(Restaurant.id == request.restaurant_id))
@@ -145,17 +145,36 @@ async def login_customer_via_telegram(request: CustomerAuthRequest, db: AsyncSes
     if not user_data or "id" not in user_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Telegram authentication data for customer",
+            detail="Invalid Telegram authentication data",
         )
         
     telegram_id = user_data["id"]
     
-    # Check if user exists
+    # Check if the user is the owner
+    if telegram_id == restaurant.owner_id:
+        result_owner = await db.execute(select(RestaurantOwner).where(RestaurantOwner.telegram_id == telegram_id))
+        owner = result_owner.scalars().first()
+        if owner:
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": str(owner.telegram_id), "role": "owner"}, expires_delta=access_token_expires
+            )
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": {
+                    "telegram_id": owner.telegram_id,
+                    "full_name": owner.full_name,
+                    "balance": owner.balance,
+                    "role": "owner"
+                }
+            }
+
+    # Otherwise, it's a customer
     user_r = await db.execute(select(User).where(User.telegram_id == telegram_id))
     user = user_r.scalars().first()
     
     if not user:
-        from models import UserLanguage
         user = User(
             telegram_id=telegram_id,
             full_name=f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip() or "Unknown",
@@ -166,7 +185,7 @@ async def login_customer_via_telegram(request: CustomerAuthRequest, db: AsyncSes
         await db.commit()
         await db.refresh(user)
         
-    # Generate JWT
+    # Generate JWT for customer
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.telegram_id), "role": "customer", "restaurant_id": restaurant.id}, 
@@ -180,7 +199,8 @@ async def login_customer_via_telegram(request: CustomerAuthRequest, db: AsyncSes
             "telegram_id": user.telegram_id,
             "full_name": user.full_name,
             "restaurant_id": user.restaurant_id,
-            "balance": "0.00" # Users don't have balance in the model right now
+            "balance": "0.00",
+            "role": "customer"
         }
     }
 

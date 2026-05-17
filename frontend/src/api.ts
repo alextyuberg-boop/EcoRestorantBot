@@ -21,8 +21,8 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Admin Auth
-export const authenticateWithTelegram = async () => {
+// App Auth (Unified for Owner and Customer inside Bot 2)
+export const authenticateApp = async (restaurantId: number) => {
   try {
     const initData = tg.initData;
     if (!initData) {
@@ -33,12 +33,13 @@ export const authenticateWithTelegram = async () => {
         id: 0, 
         full_name: "Test Foydalanuvchi", 
         balance: "100.00",
-        telegram_id: 123456
+        telegram_id: 123456,
+        role: "owner" // Mock role
       };
     }
     
     try {
-      const response = await api.post('/api/auth/telegram', { initData });
+      const response = await api.post('/api/auth/app', { initData, restaurant_id: restaurantId });
       const { access_token, user } = response.data;
       localStorage.setItem('jwt_token', access_token);
       return user;

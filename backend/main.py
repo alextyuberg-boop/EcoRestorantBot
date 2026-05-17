@@ -43,19 +43,9 @@ platform_bot = Bot(
 platform_dp = Dispatcher()
 
 # Bot 1 handler'larini ulash
-from bot1.handlers.start    import router as start_router
-from bot1.handlers.orders   import router as orders_bot_router
-from bot1.handlers.menu_mgmt import router as menu_mgmt_router
-from bot1.handlers.bot_setup import router as bot_setup_router
-from bot1.handlers.card     import router as card_router
-from bot1.handlers.profile  import router as profile_router
+from bot1.handlers.start import router as start_router
 
 platform_dp.include_router(start_router)
-platform_dp.include_router(orders_bot_router)
-platform_dp.include_router(menu_mgmt_router)
-platform_dp.include_router(bot_setup_router)
-platform_dp.include_router(card_router)
-platform_dp.include_router(profile_router)
 
 
 # ── Lifespan: ishga tushish va o'chirish ──────────────────────────────

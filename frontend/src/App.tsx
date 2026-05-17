@@ -1,7 +1,7 @@
 import { Component, useState, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { HashRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { authenticateWithTelegram, getCustomerUser } from './api';
+import { authenticateApp } from './api';
 
 // Admin Pages
 import Layout from './components/Layout';
@@ -157,33 +157,26 @@ function AppRouter() {
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurant_id');
 
-  // Owner State
-  const [owner, setOwner] = useState<any>(null);
-  
   // App State
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-
 
   useEffect(() => {
     (async () => {
       try {
-        if (restaurantId) {
-          // If accessing as a Customer, we don't need full Owner JWT auth right now.
-          // We just need the Telegram user data from initDataUnsafe
-          const customerUser = getCustomerUser();
-          if (!customerUser) {
-             setError('Telegram orqali kirish tasdiqlanmadi.');
-          }
+        if (!restaurantId) {
+          setError("Noto'g'ri havola. Iltimos, bot orqali kiring.");
+          setLoading(false);
+          return;
+        }
+
+        const rid = parseInt(restaurantId);
+        const userData = await authenticateApp(rid);
+        if (userData) {
+          setUser(userData);
         } else {
-          // Admin Mode - needs JWT auth
-          const userData = await authenticateWithTelegram();
-          if (userData) {
-            setOwner(userData);
-          } else {
-            setError('Telegram orqali avtorizatsiya amalga oshmadi.');
-          }
+          setError('Telegram orqali avtorizatsiya amalga oshmadi.');
         }
       } catch (err: any) {
         setError(err.message || 'Server bilan ulanishda xatolik yuz berdi.');
@@ -194,31 +187,32 @@ function AppRouter() {
   }, [restaurantId]);
 
   if (loading) return <SplashScreen />;
-  if (error && !owner && !restaurantId) return <ErrorScreen error={error} />;
+  if (error) return <ErrorScreen error={error} />;
 
-  if (restaurantId) {
-    // ──────── CUSTOMER APP ────────
-    const rid = parseInt(restaurantId);
+  const rid = parseInt(restaurantId as string);
+
+  if (user?.role === 'owner') {
+    // ──────── OWNER APP (Admin Panel) ────────
     return (
       <Routes>
-        <Route path="/" element={<CustomerLayout restaurantId={rid} />}>
-          <Route index element={<CustomerMenu restaurantId={rid} />} />
-          <Route path="cart" element={<CustomerCart restaurantId={rid} />} />
-          <Route path="checkout" element={<CustomerCheckout restaurantId={rid} />} />
-          <Route path="status/:orderId" element={<OrderStatus />} />
+        <Route path="/" element={<Layout user={user} />}>
+          <Route index element={<Dashboard user={user} />} />
+          <Route path="restaurants" element={<Restaurants />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     );
   }
 
-  // ──────── OWNER APP ────────
+  // ──────── CUSTOMER APP ────────
   return (
     <Routes>
-      <Route path="/" element={<Layout user={owner} />}>
-        <Route index element={<Dashboard user={owner} />} />
-        <Route path="restaurants" element={<Restaurants />} />
-        <Route path="settings" element={<Settings />} />
+      <Route path="/" element={<CustomerLayout restaurantId={rid} />}>
+        <Route index element={<CustomerMenu restaurantId={rid} />} />
+        <Route path="cart" element={<CustomerCart restaurantId={rid} />} />
+        <Route path="checkout" element={<CustomerCheckout restaurantId={rid} />} />
+        <Route path="status/:orderId" element={<OrderStatus />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

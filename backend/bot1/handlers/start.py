@@ -1,17 +1,18 @@
 """
-Bot 1 — /start handler va Onboarding FSM
-Yangi egalar: Til → Ism → Restoran nomi → Manzil → Telefon
+Bot 1 — /start handler and Onboarding FSM
+Registers the creator and creates a Restaurant from Bot Token.
 """
 import logging
-from aiogram import Router, types, F
+from aiogram import Router, types, F, Bot
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.future import select
 
 from database import async_session
-from models import RestaurantOwner, UserLanguage
+from models import RestaurantOwner, Restaurant, UserLanguage
 from bot1.states import OnboardingStates
-from bot1.keyboards import main_menu_keyboard, lang_keyboard, phone_request_keyboard
+from bot1.keyboards import lang_keyboard
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -31,16 +32,8 @@ async def cmd_start(message: types.Message, state: FSMContext):
         )
         owner = result.scalar_one_or_none()
 
-    if owner and owner.phone:
-        # Ro'yxatdan o'tgan — asosiy menyuni ko'rsatish
-        await message.answer(
-            f"🌿 <b>EcoRestaurant</b>\n\n"
-            f"Salom, {owner.full_name or message.from_user.first_name}! "
-            f"Nima qilmoqchisiz?",
-            reply_markup=main_menu_keyboard(owner.language.value if owner.language else "uz")
-        )
-    else:
-        # Yangi foydalanuvchi — onboarding boshlash
+    if not owner:
+        # Ask for language
         await message.answer(
             "🌿 <b>EcoRestaurant</b>'ga xush kelibsiz!\n\n"
             "Davom etish uchun tilni tanlang:\n\n"
@@ -49,119 +42,132 @@ async def cmd_start(message: types.Message, state: FSMContext):
             reply_markup=lang_keyboard()
         )
         await state.set_state(OnboardingStates.language)
+    else:
+        # Already registered owner
+        # Just show the instruction to add a bot or list their bots
+        await send_bot_instructions(message, owner.language.value if owner.language else "uz")
+        await state.set_state(OnboardingStates.bot_token)
 
 
-# ── Til tanlash ────────────────────────────────────────────────────────
+# ── Language Selection ──────────────────────────────────────────────────
 
 @router.callback_query(OnboardingStates.language, F.data.startswith("lang_"))
 async def process_language(callback: types.CallbackQuery, state: FSMContext):
     lang = callback.data.split("_")[1]  # uz / ru / en
-    await state.update_data(language=lang)
-
-    texts = {
-        "uz": "Ismingizni kiriting (to'liq ism):",
-        "ru": "Введите ваше имя (полное имя):",
-        "en": "Enter your full name:",
-    }
-    await callback.message.edit_text(f"✅ Til tanlandi!\n\n{texts.get(lang, texts['uz'])}")
-    await state.set_state(OnboardingStates.owner_name)
-
-
-# ── Ism ────────────────────────────────────────────────────────────────
-
-@router.message(OnboardingStates.owner_name, F.text)
-async def process_owner_name(message: types.Message, state: FSMContext):
-    name = message.text.strip()
-    if len(name) < 2:
-        await message.answer("❌ Ism kamida 2 ta harfdan iborat bo'lishi kerak.")
-        return
-
-    await state.update_data(owner_name=name)
-    await message.answer(
-        f"👍 Rahmat, <b>{name}</b>!\n\n"
-        "Restoraningiz nomini kiriting:"
-    )
-    await state.set_state(OnboardingStates.restaurant_name)
-
-
-# ── Restoran nomi ──────────────────────────────────────────────────────
-
-@router.message(OnboardingStates.restaurant_name, F.text)
-async def process_restaurant_name(message: types.Message, state: FSMContext):
-    rest_name = message.text.strip()
-    if len(rest_name) < 2:
-        await message.answer("❌ Restoran nomi kamida 2 ta harfdan iborat bo'lishi kerak.")
-        return
-
-    await state.update_data(restaurant_name=rest_name)
-    await message.answer("📍 Restoran manzilini kiriting\n(shahar, ko'cha, uy):")
-    await state.set_state(OnboardingStates.address)
-
-
-# ── Manzil ─────────────────────────────────────────────────────────────
-
-@router.message(OnboardingStates.address, F.text)
-async def process_address(message: types.Message, state: FSMContext):
-    address = message.text.strip()
-    await state.update_data(address=address)
-    await message.answer(
-        "📞 Telefon raqamingizni yuboring:",
-        reply_markup=phone_request_keyboard()
-    )
-    await state.set_state(OnboardingStates.phone)
-
-
-# ── Telefon ────────────────────────────────────────────────────────────
-
-@router.message(OnboardingStates.phone, F.contact)
-async def process_phone_contact(message: types.Message, state: FSMContext):
-    phone = message.contact.phone_number
-    await _save_and_finish(message, state, phone)
-
-
-@router.message(OnboardingStates.phone, F.text)
-async def process_phone_text(message: types.Message, state: FSMContext):
-    phone = message.text.strip().replace(" ", "").replace("-", "")
-    if not phone.startswith("+"):
-        phone = "+" + phone
-    if len(phone) < 10:
-        await message.answer("❌ Telefon raqam noto'g'ri. Qayta kiriting:")
-        return
-    await _save_and_finish(message, state, phone)
-
-
-async def _save_and_finish(message: types.Message, state: FSMContext, phone: str):
-    """Ma'lumotlarni DB ga saqlab, asosiy menyuni ko'rsatadi."""
-    data = await state.get_data()
-    lang_str = data.get("language", "uz")
-    lang = UserLanguage[lang_str] if lang_str in UserLanguage.__members__ else UserLanguage.uz
-
+    
+    # Create or update Owner
     async with async_session() as session:
-        # Egani yangilash yoki yaratish
         result = await session.execute(
-            select(RestaurantOwner).where(
-                RestaurantOwner.telegram_id == message.from_user.id
-            )
+            select(RestaurantOwner).where(RestaurantOwner.telegram_id == callback.from_user.id)
         )
         owner = result.scalar_one_or_none()
-
+        
         if not owner:
-            owner = RestaurantOwner(telegram_id=message.from_user.id)
+            owner = RestaurantOwner(
+                telegram_id=callback.from_user.id,
+                full_name=callback.from_user.full_name,
+                language=UserLanguage[lang]
+            )
             session.add(owner)
+            await session.commit()
+            
+    await callback.message.delete()
+    await send_bot_instructions(callback.message, lang)
+    await state.set_state(OnboardingStates.bot_token)
 
-        owner.full_name = data.get("owner_name", message.from_user.full_name)
-        owner.phone     = phone
-        owner.language  = lang
 
-        await session.commit()
+async def send_bot_instructions(message: types.Message, lang: str):
+    instructions = {
+        "uz": (
+            "🤖 <b>Shaxsiy botingizni ulash</b>\n\n"
+            "1️⃣ @BotFather botiga kiring va <b>/newbot</b> buyrug'ini yuboring.\n"
+            "2️⃣ Botingiz uchun nom va username tanlang.\n"
+            "3️⃣ BotFather sizga <b>HTTP API Token</b> beradi (masalan: <code>123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11</code>).\n\n"
+            "👇 O'sha tokenni shu yerga yuboring:"
+        ),
+        "ru": (
+            "🤖 <b>Подключение вашего бота</b>\n\n"
+            "1️⃣ Перейдите в @BotFather и отправьте команду <b>/newbot</b>.\n"
+            "2️⃣ Выберите имя и username для вашего бота.\n"
+            "3️⃣ BotFather выдаст вам <b>HTTP API Token</b>.\n\n"
+            "👇 Отправьте этот токен сюда:"
+        ),
+        "en": (
+            "🤖 <b>Connect your bot</b>\n\n"
+            "1️⃣ Go to @BotFather and send <b>/newbot</b>.\n"
+            "2️⃣ Choose a name and username for your bot.\n"
+            "3️⃣ BotFather will give you an <b>HTTP API Token</b>.\n\n"
+            "👇 Send that token here:"
+        )
+    }
+    text = instructions.get(lang, instructions["uz"])
+    
+    # If the message is from a callback, reply to its chat
+    chat_id = message.chat.id
+    
+    # We need a generic bot instance to send message
+    await message.bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
 
-    await state.clear()
 
-    await message.answer(
-        "🎉 <b>Ro'yxatdan o'tish muvaffaqiyatli!</b>\n\n"
-        f"Ism: <b>{owner.full_name}</b>\n"
-        f"Tel: <b>{phone}</b>\n\n"
-        "Endi restoraningizni boshqarishingiz mumkin!\n"
-        "Botingizni sozlash uchun <b>🤖 Botimni sozla</b> tugmasini bosing.",
-        reply_markup=main_menu_keyboard(lang_str)
-    )
+# ── Token Input ────────────────────────────────────────────────────────
+
+@router.message(OnboardingStates.bot_token, F.text)
+async def process_bot_token(message: types.Message, state: FSMContext):
+    token = message.text.strip()
+    
+    if ":" not in token or len(token) < 30:
+        await message.answer("❌ Noto'g'ri token formati. Iltimos, BotFather bergan tokenni to'g'ri nusxalang.")
+        return
+
+    wait_msg = await message.answer("⏳ Token tekshirilmoqda...")
+    
+    # Validate token
+    try:
+        new_bot = Bot(token=token)
+        bot_me = await new_bot.get_me()
+        await new_bot.session.close()
+    except Exception as e:
+        logger.error(f"Bot token validation failed: {e}")
+        await wait_msg.edit_text("❌ Token noto'g'ri yoki yaroqsiz. Qayta urinib ko'ring.")
+        return
+
+    # Check if this token is already used
+    async with async_session() as session:
+        result = await session.execute(select(Restaurant).where(Restaurant.bot_token == token))
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            if existing.owner_id != message.from_user.id:
+                await wait_msg.edit_text("❌ Bu bot allaqachon boshqa foydalanuvchi tomonidan ulangan.")
+                return
+            else:
+                restaurant = existing
+        else:
+            # Create new restaurant
+            restaurant = Restaurant(
+                owner_id=message.from_user.id,
+                name=bot_me.first_name,
+                bot_token=token,
+                bot_username=bot_me.username,
+                bot_id=bot_me.id
+            )
+            session.add(restaurant)
+            await session.commit()
+            await session.refresh(restaurant)
+
+            # Start the new bot dynamically
+            from bot_manager import register_restaurant_bot
+            await register_restaurant_bot(restaurant.bot_token, restaurant.id)
+
+        # Success message
+        await wait_msg.edit_text(
+            f"✅ <b>Tabriklaymiz!</b>\n\n"
+            f"Sizning restoraningiz muvaffaqiyatli yaratildi.\n\n"
+            f"Barcha sozlamalar va admin panel shaxsiy botingiz ichida joylashgan.\n"
+            f"Hozir o'z botingizga o'ting va <b>/start</b> ni bosing:\n\n"
+            f"👉 @{bot_me.username}",
+            parse_mode="HTML"
+        )
+        
+        # We can clear state now, they are fully onboarded.
+        await state.clear()

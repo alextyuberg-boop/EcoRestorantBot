@@ -61,12 +61,13 @@ def get_start_router(restaurant_id: int) -> Router:
         # Mini App URL
         mini_app_url = os.getenv("MINI_APP_URL", "")
 
+        is_owner = (message.from_user.id == restaurant.owner_id)
+
         if mini_app_url:
-            # Mini App bilan (Variant A — tavsiya etiladi)
             customer_url = f"{mini_app_url}?restaurant_id={restaurant_id}"
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(
-                    text="🍽 Menyuni Ko'rish",
+                    text="⚙️ Admin Panel" if is_owner else "🍽 Menyuni Ko'rish",
                     web_app=types.WebAppInfo(url=customer_url)
                 )],
                 [InlineKeyboardButton(
@@ -75,19 +76,25 @@ def get_start_router(restaurant_id: int) -> Router:
                 )],
             ])
         else:
-            # Faqat bot keyboard (Variant B — backup)
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🍽 Menyuni Ko'rish", callback_data="show_menu")],
                 [InlineKeyboardButton(text="📦 Zakazlarim",      callback_data="my_orders")],
             ])
 
-        greeting = (
-            f"🌿 <b>{restaurant.name}</b>\n\n"
-            "Assalomu alaykum! 👋\n\n"
-            "Menyuni ko'rish va zakaz berish uchun pastdagi tugmani bosing:"
-        )
+        if is_owner:
+            greeting = (
+                f"🛡 <b>{restaurant.name} Boshqaruvi</b>\n\n"
+                "Salom, Admin! Sizning botingiz tayyor.\n"
+                "Pastdagi tugmani bosib, admin panelga kiring va sozlamalarni bajaring."
+            )
+        else:
+            greeting = (
+                f"🌿 <b>{restaurant.name}</b>\n\n"
+                "Assalomu alaykum! 👋\n\n"
+                "Menyuni ko'rish va zakaz berish uchun pastdagi tugmani bosing:"
+            )
 
-        if restaurant.logo_file_id:
+        if restaurant.logo_file_id and not is_owner:
             await message.answer_photo(
                 restaurant.logo_file_id,
                 caption=greeting,
