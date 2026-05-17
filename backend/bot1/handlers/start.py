@@ -32,21 +32,15 @@ async def cmd_start(message: types.Message, state: FSMContext):
         )
         owner = result.scalar_one_or_none()
 
-    if not owner:
-        # Ask for language
-        await message.answer(
-            "🌿 <b>EcoRestaurant</b>'ga xush kelibsiz!\n\n"
-            "Davom etish uchun tilni tanlang:\n\n"
-            "Выберите язык:\n\n"
-            "Choose language:",
-            reply_markup=lang_keyboard()
-        )
-        await state.set_state(OnboardingStates.language)
-    else:
-        # Already registered owner
-        # Just show the instruction to add a bot or list their bots
-        await send_bot_instructions(message, owner.language.value if owner.language else "uz")
-        await state.set_state(OnboardingStates.bot_token)
+    # Ask for language
+    await message.answer(
+        "🌿 <b>EcoRestaurant</b>'ga xush kelibsiz!\n\n"
+        "Davom etish uchun tilni tanlang:\n\n"
+        "Выберите язык:\n\n"
+        "Choose language:",
+        reply_markup=lang_keyboard()
+    )
+    await state.set_state(OnboardingStates.language)
 
 
 # ── Language Selection ──────────────────────────────────────────────────
