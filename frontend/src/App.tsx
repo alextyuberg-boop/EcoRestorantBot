@@ -198,12 +198,13 @@ function AppRouter() {
 
   if (restaurantId) {
     // ──────── CUSTOMER APP ────────
+    const rid = parseInt(restaurantId);
     return (
       <Routes>
-        <Route path="/" element={<CustomerLayout />}>
-          <Route index element={<CustomerMenu restaurantId={parseInt(restaurantId)} />} />
-          <Route path="cart" element={<CustomerCart restaurantId={parseInt(restaurantId)} />} />
-          <Route path="checkout" element={<CustomerCheckout restaurantId={parseInt(restaurantId)} />} />
+        <Route path="/" element={<CustomerLayout restaurantId={rid} />}>
+          <Route index element={<CustomerMenu restaurantId={rid} />} />
+          <Route path="cart" element={<CustomerCart restaurantId={rid} />} />
+          <Route path="checkout" element={<CustomerCheckout restaurantId={rid} />} />
           <Route path="status/:orderId" element={<OrderStatus />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

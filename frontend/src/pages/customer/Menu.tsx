@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getCustomerMenu } from '../../api';
 import { useCart } from '../../context/CartContext';
-import { Plus, Minus } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { Plus, Minus, UtensilsCrossed } from 'lucide-react';
 
 export default function Menu({ restaurantId }: { restaurantId: number }) {
   const [categories, setCategories] = useState<any[]>([]);
@@ -10,6 +11,7 @@ export default function Menu({ restaurantId }: { restaurantId: number }) {
   const [error, setError] = useState('');
 
   const { cart, addToCart, updateQuantity } = useCart();
+  const { tokens } = useTheme();
 
   useEffect(() => {
     (async () => {
@@ -17,8 +19,8 @@ export default function Menu({ restaurantId }: { restaurantId: number }) {
         const data = await getCustomerMenu(restaurantId);
         setCategories(data);
         if (data.length > 0) setActiveTab(data[0].id);
-      } catch (err: any) {
-        setError('Menyu yuklashda xatolik yuz berdi');
+      } catch {
+        setError("Menyu yuklashda xatolik yuz berdi");
       } finally {
         setLoading(false);
       }
@@ -27,16 +29,57 @@ export default function Menu({ restaurantId }: { restaurantId: number }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 50, color: '#00E561' }}>
-        Yuklanmoqda...
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 300,
+        gap: 16,
+      }}>
+        {/* Animated dots */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: tokens.accent,
+              animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite`,
+            }} />
+          ))}
+        </div>
+        <style>{`
+          @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+        <span style={{ color: tokens.textMuted, fontSize: 14 }}>Menyu yuklanmoqda...</span>
       </div>
     );
   }
 
   if (error || categories.length === 0) {
     return (
-      <div style={{ textAlign: 'center', marginTop: 50, color: '#888' }}>
-        {error || "Menyu hozircha bo'sh"}
+      <div style={{
+        textAlign: 'center',
+        padding: '60px 24px',
+        color: tokens.textMuted,
+      }}>
+        <UtensilsCrossed size={48} color={tokens.textFaint} style={{ marginBottom: 16 }} />
+        <p style={{ fontSize: 16, fontWeight: 600, color: tokens.text }}>
+          {error || "Menyu hozircha bo'sh"}
+        </p>
+        <p style={{ fontSize: 13, marginTop: 8 }}>Keyinroq qayta urinib ko'ring</p>
       </div>
     );
   }
@@ -44,118 +87,214 @@ export default function Menu({ restaurantId }: { restaurantId: number }) {
   const activeCategory = categories.find(c => c.id === activeTab);
 
   return (
-    <div>
-      {/* Categories Horizontal Scroll */}
+    <div style={{ animation: 'fadeIn 0.3s ease' }}>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+          40% { transform: scale(1); opacity: 1; }
+        }
+        .food-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+        .add-btn:active { transform: scale(0.92); }
+      `}</style>
+
+      {/* ── Category Tabs ─────────────────────────── */}
       <div style={{
         display: 'flex',
         overflowX: 'auto',
-        gap: 12,
-        paddingBottom: 16,
-        marginBottom: 20,
+        gap: 10,
+        paddingBottom: 4,
+        marginBottom: 24,
         scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch',
       }}>
-        {categories.map((c) => (
-          <div
-            key={c.id}
-            onClick={() => setActiveTab(c.id)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              background: activeTab === c.id ? '#00E561' : '#1A1A1A',
-              color: activeTab === c.id ? '#000' : '#FFF',
-              fontWeight: 600,
-              fontSize: 14,
-              whiteSpace: 'nowrap',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              border: `1px solid ${activeTab === c.id ? '#00E561' : '#2A2A2A'}`
-            }}
-          >
-            {c.name}
-          </div>
-        ))}
+        {categories.map((c) => {
+          const isActive = activeTab === c.id;
+          return (
+            <div
+              key={c.id}
+              onClick={() => setActiveTab(c.id)}
+              style={{
+                padding: '9px 18px',
+                borderRadius: 30,
+                background: isActive ? tokens.accent : tokens.bgCard,
+                color: isActive ? tokens.accentText : tokens.textMuted,
+                fontWeight: 700,
+                fontSize: 14,
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                border: `1.5px solid ${isActive ? tokens.accent : tokens.border}`,
+                boxShadow: isActive ? `0 4px 16px ${tokens.accentBgStrong}` : 'none',
+                flexShrink: 0,
+              }}
+            >
+              {c.name}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Items Grid */}
+      {/* ── Items Grid ────────────────────────────── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-        gap: 16
+        gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
+        gap: 14,
       }}>
         {activeCategory?.items?.map((item: any) => {
           const cartItem = cart.find(i => i.item_id === item.id);
           const qty = cartItem ? cartItem.qty : 0;
 
           return (
-            <div key={item.id} style={{
-              background: '#111',
-              borderRadius: 16,
-              overflow: 'hidden',
-              border: '1px solid #2A2A2A',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              {/* Item Image Placeholder */}
+            <div
+              key={item.id}
+              className="food-card"
+              style={{
+                background: tokens.bgCard,
+                borderRadius: 18,
+                overflow: 'hidden',
+                border: `1px solid ${qty > 0 ? tokens.accent : tokens.border}`,
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'all 0.22s ease',
+                boxShadow: qty > 0 ? `0 4px 20px ${tokens.accentBg}` : tokens.shadow,
+              }}
+            >
+              {/* Image Area */}
               <div style={{
-                height: 120,
-                background: '#1A1A1A',
+                height: 130,
+                background: item.image_url
+                  ? `url(${item.image_url}) center/cover no-repeat`
+                  : `linear-gradient(135deg, ${tokens.bgElevated} 0%, ${tokens.bgCard} 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#444'
+                position: 'relative',
               }}>
-                {item.image_file_id ? (
-                  <div style={{ fontSize: 10, textAlign: 'center' }}>Rasm mavjud emas<br/>(Telegram File ID)</div>
-                ) : (
-                  <span style={{ fontSize: 32 }}>🍽️</span>
+                {!item.image_url && (
+                  <span style={{ fontSize: 42, filter: 'grayscale(0.2)' }}>🍽️</span>
+                )}
+                {!item.is_available && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(0,0,0,0.55)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{
+                      color: '#fff', fontWeight: 700, fontSize: 13,
+                      background: 'rgba(0,0,0,0.6)', padding: '4px 12px', borderRadius: 20,
+                    }}>Mavjud emas</span>
+                  </div>
                 )}
               </div>
-              
-              <div style={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{item.name}</h3>
-                <p style={{ fontSize: 11, color: '#888', marginBottom: 12, flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {item.description || 'Taom haqida ma\'lumot'}
-                </p>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#00E561' }}>
-                    {item.price.toLocaleString()} so'm
-                  </div>
-                  
+
+              {/* Content */}
+              <div style={{ padding: '12px 12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <h3 style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: tokens.text,
+                  lineHeight: 1.3,
+                  margin: 0,
+                }}>
+                  {item.name}
+                </h3>
+                {item.description && (
+                  <p style={{
+                    fontSize: 11,
+                    color: tokens.textMuted,
+                    margin: 0,
+                    flex: 1,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    lineHeight: 1.4,
+                  }}>
+                    {item.description}
+                  </p>
+                )}
+
+                {/* Price + Cart Controls */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                  <span style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: tokens.accent,
+                    letterSpacing: '-0.01em',
+                  }}>
+                    {item.price.toLocaleString()}
+                    <span style={{ fontSize: 10, fontWeight: 600, color: tokens.textMuted, marginLeft: 2 }}>so'm</span>
+                  </span>
+
                   {qty === 0 ? (
-                    <button 
+                    <button
+                      className="add-btn"
                       onClick={() => addToCart({ id: item.id, name: item.name, price: item.price })}
                       style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: '#1A1A1A', border: '1px solid #2A2A2A',
-                        color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer'
+                        width: 34,
+                        height: 34,
+                        borderRadius: 10,
+                        background: tokens.accent,
+                        border: 'none',
+                        color: tokens.accentText,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s',
+                        boxShadow: `0 4px 12px ${tokens.accentBg}`,
                       }}
                     >
-                      <Plus size={16} />
+                      <Plus size={18} strokeWidth={2.5} />
                     </button>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <button 
+                      <button
                         onClick={() => updateQuantity(item.id, -1)}
                         style={{
-                          width: 28, height: 28, borderRadius: 8,
-                          background: '#1A1A1A', border: 'none', color: '#FFF',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          width: 28,
+                          height: 28,
+                          borderRadius: 8,
+                          background: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          color: tokens.text,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
                         }}
                       >
-                        <Minus size={14} />
+                        <Minus size={13} />
                       </button>
-                      <span style={{ fontSize: 14, fontWeight: 600, width: 16, textAlign: 'center' }}>{qty}</span>
-                      <button 
+                      <span style={{
+                        fontSize: 15,
+                        fontWeight: 800,
+                        color: tokens.accent,
+                        minWidth: 18,
+                        textAlign: 'center',
+                      }}>
+                        {qty}
+                      </span>
+                      <button
                         onClick={() => updateQuantity(item.id, 1)}
                         style={{
-                          width: 28, height: 28, borderRadius: 8,
-                          background: '#00E561', border: 'none', color: '#000',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          width: 28,
+                          height: 28,
+                          borderRadius: 8,
+                          background: tokens.accent,
+                          border: 'none',
+                          color: tokens.accentText,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
                         }}
                       >
-                        <Plus size={14} />
+                        <Plus size={13} />
                       </button>
                     </div>
                   )}

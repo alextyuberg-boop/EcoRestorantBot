@@ -104,6 +104,31 @@ async def get_public_menu(restaurant_id: int, db: AsyncSession = Depends(get_db)
     return result
 
 
+@router.get("/restaurant/{restaurant_id}/settings")
+async def get_restaurant_settings(restaurant_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Mijoz Mini App uchun: restoran branding sozlamalarini qaytaradi.
+    JWT kerak emas.
+    """
+    result = await db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    )
+    restaurant = result.scalar_one_or_none()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restoran topilmadi.")
+
+    return {
+        "id":            restaurant.id,
+        "name":          restaurant.name,
+        "primary_color": restaurant.primary_color or "#00E561",
+        "theme":         getattr(restaurant, "theme", "dark") or "dark",
+        "logo_file_id":  restaurant.logo_file_id,
+        "is_active":     restaurant.is_active,
+        "delivery_fee":  float(restaurant.delivery_fee or 0),
+        "min_order":     float(restaurant.min_order or 0),
+    }
+
+
 # ════════════════════════════════════════════════════════════════════════
 # ADMIN ENDPOINTLAR — egalar uchun (JWT kerak)
 # ════════════════════════════════════════════════════════════════════════

@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { useTheme } from '../../context/ThemeContext';
 import { createOrder, getCustomerUser } from '../../api';
-import { ArrowLeft, MapPin, Phone, CreditCard, Banknote } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, CreditCard, Banknote, ChevronRight } from 'lucide-react';
 
 export default function Checkout({ restaurantId }: { restaurantId: number }) {
   const { cart, totalPrice, clearCart } = useCart();
+  const { tokens } = useTheme();
   const navigate = useNavigate();
-  
+
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [paymentType, setPaymentType] = useState('cash'); // 'cash' or 'card'
+  const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,19 +21,32 @@ export default function Checkout({ restaurantId }: { restaurantId: number }) {
     return null;
   }
 
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 16px',
+    borderRadius: 12,
+    background: tokens.bgElevated,
+    border: `1.5px solid ${tokens.border}`,
+    color: tokens.text,
+    fontSize: 15,
+    fontWeight: 500,
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+    fontFamily: 'inherit',
+    transition: 'border-color 0.2s',
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || !address) {
       setError("Iltimos, barcha maydonlarni to'ldiring");
       return;
     }
-
     setLoading(true);
     setError('');
 
     try {
       const customer = getCustomerUser();
-      
       const orderData = {
         restaurant_id: restaurantId,
         user_id: customer.id,
@@ -39,134 +54,266 @@ export default function Checkout({ restaurantId }: { restaurantId: number }) {
           item_id: item.item_id,
           name: item.name,
           qty: item.qty,
-          price: item.price
+          price: item.price,
         })),
         total_amount: totalPrice,
-        phone: phone,
+        phone,
         delivery_address: address,
-        payment_type: paymentType
+        payment_type: paymentType,
       };
 
       const result = await createOrder(orderData);
-      
       clearCart();
       navigate(`/status/${result.id}`);
     } catch (err: any) {
-      setError(err.message || 'Zakaz yaratishda xatolik yuz berdi');
+      setError(err.response?.data?.detail || err.message || "Xatolik yuz berdi. Qayta urinib ko'ring.");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <button 
+    <div style={{ animation: 'fadeIn 0.3s ease' }}>
+      <style>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input:focus, textarea:focus { border-color: ${tokens.accent} !important; }
+      `}</style>
+
+      {/* Back + Title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+        <button
           onClick={() => navigate('/cart')}
-          style={{ background: 'none', border: 'none', color: '#FFF', cursor: 'pointer', padding: 0 }}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: tokens.bgElevated,
+            border: `1px solid ${tokens.border}`,
+            color: tokens.text,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} />
         </button>
-        <h1 style={{ fontSize: 20, fontWeight: 800 }}>Rasmiylashtirish</h1>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: tokens.text, margin: 0 }}>Rasmiylashtirish</h1>
+          <p style={{ fontSize: 13, color: tokens.textMuted, margin: 0 }}>Yetkazish ma'lumotlari</p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        
-        {/* Phone Input */}
-        <div>
-          <label style={{ display: 'block', fontSize: 14, color: '#888', marginBottom: 8 }}>Telefon raqam</label>
-          <div style={{
-            display: 'flex', alignItems: 'center', background: '#111', 
-            border: '1px solid #2A2A2A', borderRadius: 12, padding: '0 16px'
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Phone */}
+        <div style={{
+          background: tokens.bgCard,
+          borderRadius: 16,
+          padding: 16,
+          border: `1px solid ${tokens.border}`,
+        }}>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            color: tokens.textMuted,
+            fontSize: 12,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 10,
           }}>
-            <Phone size={18} color="#888" />
-            <input 
-              type="tel" 
-              placeholder="+998 90 123 45 67"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              style={{
-                flex: 1, background: 'transparent', border: 'none', color: '#FFF', 
-                padding: '16px 12px', fontSize: 16, outline: 'none'
-              }}
-            />
-          </div>
+            <Phone size={14} />
+            Telefon raqam
+          </label>
+          <input
+            type="tel"
+            placeholder="+998 90 123 45 67"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            style={inputStyle}
+          />
         </div>
 
-        {/* Address Input */}
-        <div>
-          <label style={{ display: 'block', fontSize: 14, color: '#888', marginBottom: 8 }}>Yetkazib berish manzili</label>
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', background: '#111', 
-            border: '1px solid #2A2A2A', borderRadius: 12, padding: '16px'
+        {/* Address */}
+        <div style={{
+          background: tokens.bgCard,
+          borderRadius: 16,
+          padding: 16,
+          border: `1px solid ${tokens.border}`,
+        }}>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            color: tokens.textMuted,
+            fontSize: 12,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 10,
           }}>
-            <MapPin size={18} color="#888" style={{ marginTop: 2 }} />
-            <textarea 
-              placeholder="Shahar, ko'cha, uy raqami, mo'ljal..."
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              rows={3}
-              style={{
-                flex: 1, background: 'transparent', border: 'none', color: '#FFF', 
-                padding: '0 12px', fontSize: 16, outline: 'none', resize: 'none'
-              }}
-            />
-          </div>
+            <MapPin size={14} />
+            Yetkazish manzili
+          </label>
+          <textarea
+            placeholder="Shahar, ko'cha, uy raqami..."
+            value={address}
+            onChange={e => setAddress(e.target.value)}
+            rows={3}
+            style={{ ...inputStyle, resize: 'none', lineHeight: 1.5 }}
+          />
         </div>
 
         {/* Payment Type */}
-        <div>
-          <label style={{ display: 'block', fontSize: 14, color: '#888', marginBottom: 8 }}>To'lov turi</label>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div 
-              onClick={() => setPaymentType('cash')}
-              style={{
-                flex: 1, padding: 16, borderRadius: 12, border: `1px solid ${paymentType === 'cash' ? '#00E561' : '#2A2A2A'}`,
-                background: paymentType === 'cash' ? 'rgba(0,229,97,0.1)' : '#111',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              <Banknote size={24} color={paymentType === 'cash' ? '#00E561' : '#888'} />
-              <span style={{ fontSize: 14, fontWeight: 600, color: paymentType === 'cash' ? '#00E561' : '#888' }}>Naqd pul</span>
-            </div>
-            
-            <div 
-              onClick={() => setPaymentType('card')}
-              style={{
-                flex: 1, padding: 16, borderRadius: 12, border: `1px solid ${paymentType === 'card' ? '#00E561' : '#2A2A2A'}`,
-                background: paymentType === 'card' ? 'rgba(0,229,97,0.1)' : '#111',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              <CreditCard size={24} color={paymentType === 'card' ? '#00E561' : '#888'} />
-              <span style={{ fontSize: 14, fontWeight: 600, color: paymentType === 'card' ? '#00E561' : '#888' }}>Karta orqali</span>
-            </div>
+        <div style={{
+          background: tokens.bgCard,
+          borderRadius: 16,
+          padding: 16,
+          border: `1px solid ${tokens.border}`,
+        }}>
+          <label style={{
+            color: tokens.textMuted,
+            fontSize: 12,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            display: 'block',
+            marginBottom: 12,
+          }}>
+            To'lov usuli
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {([
+              { value: 'cash', label: "Naqd pul", icon: Banknote },
+              { value: 'card', label: "Plastik karta", icon: CreditCard },
+            ] as const).map(({ value, label, icon: Icon }) => {
+              const isSelected = paymentType === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPaymentType(value)}
+                  style={{
+                    padding: '14px 12px',
+                    borderRadius: 14,
+                    background: isSelected ? tokens.accentBg : tokens.bgElevated,
+                    border: `2px solid ${isSelected ? tokens.accent : tokens.border}`,
+                    color: isSelected ? tokens.accent : tokens.textMuted,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 8,
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Icon size={22} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
+        {/* Order Summary */}
+        <div style={{
+          background: tokens.bgCard,
+          borderRadius: 16,
+          padding: 16,
+          border: `1px solid ${tokens.border}`,
+        }}>
+          <p style={{ color: tokens.textMuted, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+            Buyurtma
+          </p>
+          {cart.map(item => (
+            <div key={item.item_id} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+              fontSize: 14,
+              color: tokens.text,
+            }}>
+              <span style={{ color: tokens.textMuted }}>{item.name} × {item.qty}</span>
+              <span style={{ fontWeight: 700 }}>{(item.price * item.qty).toLocaleString()} so'm</span>
+            </div>
+          ))}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 12,
+            paddingTop: 12,
+            borderTop: `1px solid ${tokens.border}`,
+            fontSize: 17,
+            fontWeight: 800,
+            color: tokens.text,
+          }}>
+            <span>Jami:</span>
+            <span style={{ color: tokens.accent }}>{totalPrice.toLocaleString()} so'm</span>
+          </div>
+        </div>
+
+        {/* Error */}
         {error && (
-          <div style={{ color: '#FF4444', fontSize: 14, textAlign: 'center', padding: 8, background: 'rgba(255,68,68,0.1)', borderRadius: 8 }}>
+          <div style={{
+            background: 'rgba(255,70,70,0.08)',
+            border: '1px solid rgba(255,70,70,0.25)',
+            borderRadius: 12,
+            padding: '12px 16px',
+            color: '#FF4646',
+            fontSize: 14,
+            fontWeight: 500,
+          }}>
             {error}
           </div>
         )}
 
-        <button 
+        {/* Submit */}
+        <button
           type="submit"
           disabled={loading}
           style={{
-            marginTop: 12,
             width: '100%',
-            background: '#00E561',
-            color: '#000',
-            padding: '16px',
-            borderRadius: 12,
+            background: loading ? tokens.bgElevated : tokens.accent,
+            color: loading ? tokens.textMuted : tokens.accentText,
+            padding: '17px',
+            borderRadius: 16,
             fontWeight: 800,
             fontSize: 16,
             border: 'none',
             cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1
+            boxShadow: loading ? 'none' : `0 6px 24px ${tokens.accentBgStrong}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            letterSpacing: '-0.01em',
+            transition: 'all 0.2s',
+            marginBottom: 32,
           }}
         >
-          {loading ? "Yuborilmoqda..." : `Buyurtma berish (${totalPrice.toLocaleString()} so'm)`}
+          {loading ? (
+            <>
+              <div style={{
+                width: 18,
+                height: 18,
+                borderRadius: '50%',
+                border: `2px solid ${tokens.textFaint}`,
+                borderTopColor: tokens.accent,
+                animation: 'spin 0.8s linear infinite',
+              }} />
+              Yuborilmoqda...
+            </>
+          ) : (
+            <>
+              Buyurtma berish
+              <ChevronRight size={20} />
+            </>
+          )}
         </button>
       </form>
     </div>
