@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 
 from database import get_db
 from models import Restaurant, RestaurantOwner
-from schemas import RestaurantCreate, RestaurantResponse
+from schemas import RestaurantCreate, RestaurantResponse, RestaurantUpdate
 from .auth import get_current_owner
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
@@ -50,3 +50,49 @@ async def create_restaurant(
     await db.commit()
     await db.refresh(new_restaurant)
     return new_restaurant
+
+@router.get("/{restaurant_id}", response_model=RestaurantResponse)
+async def get_restaurant(
+    restaurant_id: int,
+    owner: RestaurantOwner = Depends(get_current_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Restaurant).where(
+            Restaurant.id == restaurant_id,
+            Restaurant.owner_id == owner.telegram_id
+        )
+    )
+    restaurant = result.scalar_one_or_none()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    return restaurant
+
+@router.patch("/{restaurant_id}", response_model=RestaurantResponse)
+async def update_restaurant(
+    restaurant_id: int,
+    restaurant_data: RestaurantUpdate,
+    owner: RestaurantOwner = Depends(get_current_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Restaurant).where(
+            Restaurant.id == restaurant_id,
+            Restaurant.owner_id == owner.telegram_id
+        )
+    )
+    restaurant = result.scalar_one_or_none()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    update_data = restaurant_data.model_dump(exclude_none=True)
+    for key, value in update_data.items():
+        setattr(restaurant, key, value)
+        
+    await db.commit()
+    await db.refresh(restaurant)
+    
+    # If bot token changes or status changes, we could re-register in bot_manager,
+    # but here they are just updating branding and settings.
+    return restaurant
+

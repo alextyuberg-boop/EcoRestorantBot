@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { api } from '../api';
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'green';
 
 export interface RestaurantTheme {
   mode: ThemeMode;
@@ -10,7 +10,9 @@ export interface RestaurantTheme {
   deliveryFee: number;
   minOrder: number;
   isActive: boolean;
+  logoUrl?: string;
 }
+
 
 interface ThemeContextType {
   theme: RestaurantTheme;
@@ -64,8 +66,29 @@ export const LIGHT_TOKENS: Omit<ThemeTokens, 'accent' | 'accentText' | 'accentBg
   headerBg:      'rgba(255,255,255,0.90)',
 };
 
+export const GREEN_TOKENS: Omit<ThemeTokens, 'accent' | 'accentText' | 'accentBg' | 'accentBgStrong'> = {
+  bg:            '#041A0B',
+  bgCard:        '#082C15',
+  bgElevated:    '#114C26',
+  bgOverlay:     'rgba(4,26,11,0.95)',
+  text:          '#E8F8EE',
+  textMuted:     '#8FCFA7',
+  textFaint:     '#4A7D5C',
+  border:        '#164C28',
+  borderStrong:  '#226C3C',
+  shadow:        '0 4px 24px rgba(4,26,11,0.6)',
+  headerBg:      'rgba(8,44,21,0.9)',
+};
+
 function buildTokens(mode: ThemeMode, primaryColor: string): ThemeTokens {
-  const base = mode === 'dark' ? DARK_TOKENS : LIGHT_TOKENS;
+  let base;
+  if (mode === 'light') {
+    base = LIGHT_TOKENS;
+  } else if (mode === 'green') {
+    base = GREEN_TOKENS;
+  } else {
+    base = DARK_TOKENS;
+  }
   return {
     ...base,
     accent:           primaryColor,
@@ -82,6 +105,7 @@ const defaultTheme: RestaurantTheme = {
   deliveryFee: 0,
   minOrder: 0,
   isActive: true,
+  logoUrl: '',
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -105,12 +129,13 @@ export function ThemeProvider({
       try {
         const { data } = await api.get(`/api/menu/restaurant/${restaurantId}/settings`);
         const resolved: RestaurantTheme = {
-          mode:           (data.theme === 'light' ? 'light' : 'dark') as ThemeMode,
+          mode:           (data.theme === 'light' ? 'light' : data.theme === 'green' ? 'green' : 'dark') as ThemeMode,
           primaryColor:   data.primary_color || '#00E561',
           restaurantName: data.name || 'EcoRestaurant',
           deliveryFee:    data.delivery_fee || 0,
           minOrder:       data.min_order || 0,
           isActive:       data.is_active ?? true,
+          logoUrl:        data.logo_url || '',
         };
         setTheme(resolved);
         setTokens(buildTokens(resolved.mode, resolved.primaryColor));

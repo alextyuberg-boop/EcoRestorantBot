@@ -123,6 +123,7 @@ async def get_restaurant_settings(restaurant_id: int, db: AsyncSession = Depends
         "primary_color": restaurant.primary_color or "#00E561",
         "theme":         getattr(restaurant, "theme", "dark") or "dark",
         "logo_file_id":  restaurant.logo_file_id,
+        "logo_url":      restaurant.logo_url,
         "is_active":     restaurant.is_active,
         "delivery_fee":  float(restaurant.delivery_fee or 0),
         "min_order":     float(restaurant.min_order or 0),

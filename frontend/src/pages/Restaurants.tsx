@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Loader2, UtensilsCrossed, Trash2, ExternalLink, MapPin } from 'lucide-react';
+import { Plus, X, Loader2, UtensilsCrossed, Trash2, ExternalLink, MapPin, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 const tg = (WebApp as any).default || WebApp;
 import { api } from '../api';
 
 export default function Restaurants() {
+  const navigate = useNavigate();
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen]   = useState(false);
   const [restaurantName, setRestaurantName] = useState('');
@@ -146,15 +148,46 @@ export default function Restaurants() {
                 {/* Status + Actions */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                   <span className="badge badge-online">Online</span>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn-icon" style={{ width: 32, height: 32 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button 
+                      onClick={() => navigate(`/manage/${res.id}`)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: 12,
+                        borderRadius: 'var(--radius-md)',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: 'var(--color-primary)',
+                        color: '#000000',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                    >
+                      <Settings size={13} />
+                      Boshqarish
+                    </button>
+                    <button 
+                      className="btn-icon" 
+                      style={{ width: 32, height: 32 }}
+                      onClick={() => window.open(`https://t.me/${res.bot_username || 'eco_bot'}`, '_blank')}
+                      title="Botni Telegramda ochish"
+                    >
                       <ExternalLink size={14} />
                     </button>
-                    <button className="btn-danger btn-icon" style={{
-                      width: 32, height: 32,
-                      background: 'rgba(255,68,68,0.06)',
-                      borderRadius: 'var(--radius-sm)',
-                    }}>
+                    <button 
+                      className="btn-danger btn-icon" 
+                      style={{
+                        width: 32, height: 32,
+                        background: 'rgba(255,68,68,0.06)',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                      onClick={() => tg.showAlert("Xavfsizlik yuzasidan restoranni o'chirish faqat tizim administratori orqali amalga oshiriladi.")}
+                    >
                       <Trash2 size={14} />
                     </button>
                   </div>

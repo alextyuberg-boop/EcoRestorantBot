@@ -210,14 +210,15 @@ async def update_order_status(
     if not order:
         raise HTTPException(404, "Zakaz topilmadi.")
 
-    # Egalik tekshiruvi
+    # Check restaurant ownership
     rest_r = await db.execute(
         select(Restaurant).where(
             Restaurant.id == order.restaurant_id,
             Restaurant.owner_id == owner.telegram_id
         )
     )
-    if not rest_r.scalar_one_or_none():
+    rest = rest_r.scalar_one_or_none()
+    if not rest:
         raise HTTPException(403, "Ruxsat yo'q.")
 
     try:
@@ -232,7 +233,6 @@ async def update_order_status(
     try:
         from bot_manager import active_bots
         from bot_notifier import notify_customer_status
-        rest = rest_r.scalar_one_or_none()
         if rest and rest.bot_token in active_bots:
             cust_bot = active_bots[rest.bot_token]
             await notify_customer_status(

@@ -78,3 +78,70 @@ export const createOrder = async (orderData: any) => {
 export const closeWebApp = () => {
   tg.close();
 };
+
+// ==========================================
+// ADMIN API (Owner Dashboard)
+// ==========================================
+
+export const getRestaurant = async (restaurantId: number) => {
+  const response = await api.get(`/api/restaurants/${restaurantId}`);
+  return response.data;
+};
+
+export const updateRestaurantSettings = async (restaurantId: number, data: any) => {
+  const response = await api.patch(`/api/restaurants/${restaurantId}`, data);
+  return response.data;
+};
+
+export const updateOwnerProfile = async (data: any) => {
+  const response = await api.patch('/api/auth/profile', data);
+  return response.data;
+};
+
+export const getAdminCategories = async (restaurantId: number) => {
+  const response = await api.get(`/api/menu/admin/${restaurantId}/categories`);
+  return response.data;
+};
+
+export const createAdminCategory = async (restaurantId: number, data: any) => {
+  const response = await api.post(`/api/menu/admin/${restaurantId}/categories`, data);
+  return response.data;
+};
+
+export const deleteAdminCategory = async (catId: number) => {
+  const response = await api.delete(`/api/menu/admin/categories/${catId}`);
+  return response.data;
+};
+
+export const getAdminItems = async (restaurantId: number) => {
+  const response = await api.get(`/api/menu/admin/${restaurantId}/items`);
+  return response.data;
+};
+
+export const createAdminItem = async (restaurantId: number, data: any) => {
+  const response = await api.post(`/api/menu/admin/${restaurantId}/items`, data);
+  return response.data;
+};
+
+export const updateAdminItem = async (itemId: number, data: any) => {
+  const response = await api.put(`/api/menu/admin/items/${itemId}`, data);
+  return response.data;
+};
+
+export const deleteAdminItem = async (itemId: number) => {
+  const response = await api.delete(`/api/menu/admin/items/${itemId}`);
+  return response.data;
+};
+
+export const getAdminOrders = async (restaurantId: number, activeOnly: boolean = true) => {
+  const response = await api.get(`/api/orders/admin/${restaurantId}`, {
+    params: { active_only: activeOnly }
+  });
+  return response.data;
+};
+
+export const updateOrderStatus = async (orderId: number, status: string) => {
+  const response = await api.patch(`/api/orders/${orderId}/status`, { status });
+  return response.data;
+};
+

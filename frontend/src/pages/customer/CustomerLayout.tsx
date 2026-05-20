@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Sun, Moon } from 'lucide-react';
+import { ShoppingCart, Sun, Moon, Leaf } from 'lucide-react';
 import { useCart, CartProvider } from '../../context/CartContext';
 import { ThemeProvider, useTheme } from '../../context/ThemeContext';
 
@@ -14,9 +14,12 @@ const CustomerLayoutInner = () => {
     location.pathname.includes('/cart') || location.pathname.includes('/checkout');
 
   const toggleTheme = () => {
+    const nextMode = 
+      theme.mode === 'light' ? 'dark' :
+      theme.mode === 'dark' ? 'green' : 'light';
     setTheme({
       ...theme,
-      mode: theme.mode === 'dark' ? 'light' : 'dark',
+      mode: nextMode,
     });
   };
 
@@ -90,7 +93,7 @@ const CustomerLayoutInner = () => {
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            title={theme.mode === 'dark' ? "Oq temaga o'tish" : "Qora temaga o'tish"}
+            title={`Temani o'zgartirish (Hozirgi: ${theme.mode})`}
             style={{
               width: 36,
               height: 36,
@@ -105,10 +108,13 @@ const CustomerLayoutInner = () => {
               transition: 'all 0.2s',
             }}
           >
-            {theme.mode === 'dark'
-              ? <Sun size={17} />
-              : <Moon size={17} />
-            }
+            {theme.mode === 'green' ? (
+              <Leaf size={17} />
+            ) : theme.mode === 'dark' ? (
+              <Sun size={17} />
+            ) : (
+              <Moon size={17} />
+            )}
           </button>
 
           {/* Cart Button */}

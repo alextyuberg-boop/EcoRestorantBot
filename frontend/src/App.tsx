@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Restaurants from './pages/Restaurants';
 import Settings from './pages/Settings';
+import ManageRestaurant from './pages/ManageRestaurant';
 
 // Customer Pages
 import CustomerLayout from './pages/customer/CustomerLayout';
@@ -199,6 +200,7 @@ function AppRouter() {
           <Route index element={<Dashboard user={user} />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="manage/:restaurantId" element={<ManageRestaurant />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

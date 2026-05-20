@@ -4,7 +4,7 @@ Registers the creator and creates a Restaurant from Bot Token.
 """
 import logging
 from aiogram import Router, types, F, Bot
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, CommandObject, Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.future import select
 
@@ -21,8 +21,18 @@ router = Router()
 # ── /start ─────────────────────────────────────────────────────────────
 
 @router.message(CommandStart())
-async def cmd_start(message: types.Message, state: FSMContext):
+async def cmd_start(message: types.Message, state: FSMContext, command: CommandObject = None):
     await state.clear()
+
+    # Deep link parameter: /start help
+    if command and command.args == "help":
+        await message.answer(
+            "🙋‍♂️ <b>Yordam markaziga xush kelibsiz!</b>\n\n"
+            "Muammoingiz qandayligini batafsil yozib yuboring, biz sizga yordam beramiz:",
+            parse_mode="HTML"
+        )
+        await state.set_state(OnboardingStates.support_issue)
+        return
 
     async with async_session() as session:
         result = await session.execute(
@@ -41,6 +51,33 @@ async def cmd_start(message: types.Message, state: FSMContext):
         reply_markup=lang_keyboard()
     )
     await state.set_state(OnboardingStates.language)
+
+
+# ── /help ──────────────────────────────────────────────────────────────
+
+@router.message(Command("help"))
+async def cmd_help(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "🙋‍♂️ <b>Qanday muammo yuz berdi?</b>\n\n"
+        "Muammoingiz qandayligini batafsil yozib yuboring, biz sizga yordam beramiz:",
+        parse_mode="HTML"
+    )
+    await state.set_state(OnboardingStates.support_issue)
+
+
+@router.message(OnboardingStates.support_issue, F.text)
+async def process_support_issue(message: types.Message, state: FSMContext):
+    user_issue = message.text.strip()
+    
+    await message.answer(
+        "✅ <b>Rahmat! Murojaatingiz yordam markaziga qabul qilindi.</b>\n\n"
+        "Operatorlarimiz tez orada siz bilan bog'lanishadi. Iltimos, aloqada bo'ling.",
+        parse_mode="HTML"
+    )
+    
+    await state.clear()
+    logger.info(f"Support Request from {message.from_user.id} ({message.from_user.username or 'No Username'}): {user_issue}")
 
 
 # ── Language Selection ──────────────────────────────────────────────────

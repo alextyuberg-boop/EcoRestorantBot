@@ -77,7 +77,9 @@ class Restaurant(Base):
 
     # Branding
     primary_color = Column(String, default="#00E561")
+    theme         = Column(String, default="dark")
     logo_file_id  = Column(String, nullable=True)        # Telegram file_id
+    logo_url      = Column(String, nullable=True)        # Logo URL
 
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 

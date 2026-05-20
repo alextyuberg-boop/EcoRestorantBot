@@ -11,7 +11,7 @@ export default function Menu({ restaurantId }: { restaurantId: number }) {
   const [error, setError] = useState('');
 
   const { cart, addToCart, updateQuantity } = useCart();
-  const { tokens } = useTheme();
+  const { tokens, theme } = useTheme();
 
   useEffect(() => {
     (async () => {
@@ -100,6 +100,71 @@ export default function Menu({ restaurantId }: { restaurantId: number }) {
         .food-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
         .add-btn:active { transform: scale(0.92); }
       `}</style>
+
+      {/* ── Branding Header ─────────────────────────── */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        background: `linear-gradient(135deg, ${tokens.bgCard} 0%, ${tokens.bgElevated} 100%)`,
+        borderRadius: 20,
+        padding: '16px 20px',
+        marginBottom: 20,
+        border: `1.5px solid ${tokens.border}`,
+        boxShadow: tokens.shadow,
+      }}>
+        {theme.logoUrl ? (
+          <img 
+            src={theme.logoUrl} 
+            alt={theme.restaurantName}
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: `2px solid ${tokens.accent}`,
+              boxShadow: `0 0 12px ${tokens.accentBgStrong}`,
+              flexShrink: 0,
+            }}
+          />
+        ) : (
+          <div style={{
+            width: 54,
+            height: 54,
+            borderRadius: '50%',
+            background: tokens.accent,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: `2px solid ${tokens.accent}`,
+            boxShadow: `0 0 12px ${tokens.accentBgStrong}`,
+            fontSize: 20,
+            fontWeight: 800,
+            color: tokens.accentText,
+            flexShrink: 0,
+          }}>
+            {theme.restaurantName.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div>
+          <h1 style={{
+            fontSize: 18,
+            fontWeight: 800,
+            color: tokens.text,
+            margin: 0,
+            fontFamily: 'var(--font-display)',
+          }}>
+            {theme.restaurantName}
+          </h1>
+          <p style={{
+            fontSize: 12,
+            color: tokens.textMuted,
+            margin: '4px 0 0',
+          }}>
+            Bizning premium taomlar menyusi
+          </p>
+        </div>
+      </div>
 
       {/* ── Category Tabs ─────────────────────────── */}
       <div style={{

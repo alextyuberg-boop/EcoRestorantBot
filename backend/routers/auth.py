@@ -5,7 +5,9 @@ import json
 from urllib.parse import parse_qsl
 from datetime import datetime, timedelta, timezone
 
+# pyrefly: ignore [missing-import]
 import jwt
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -248,3 +250,38 @@ async def get_current_customer(credentials: HTTPAuthorizationCredentials = Depen
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
         
     return user
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    card_number: Optional[str] = None
+    language: Optional[str] = None
+
+@router.patch("/profile")
+async def update_profile(
+    body: ProfileUpdate,
+    owner: RestaurantOwner = Depends(get_current_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    update_data = body.model_dump(exclude_none=True)
+    for key, value in update_data.items():
+        if key == "language":
+            from models import UserLanguage
+            try:
+                setattr(owner, key, UserLanguage(value))
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid language value. Choose 'uz', 'ru', or 'en'")
+        else:
+            setattr(owner, key, value)
+    await db.commit()
+    await db.refresh(owner)
+    return {
+        "telegram_id": owner.telegram_id,
+        "full_name": owner.full_name,
+        "phone": owner.phone,
+        "card_number": owner.card_number,
+        "language": owner.language.value if owner.language else "uz",
+        "balance": float(owner.balance or 0),
+        "role": "owner"
+    }
+
