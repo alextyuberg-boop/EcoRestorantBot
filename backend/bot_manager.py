@@ -47,12 +47,7 @@ async def set_bot_webhook(token: str) -> bool:
     """Bot uchun webhook URL o'rnatadi."""
     base_url = os.getenv("BASE_URL")
     if not base_url:
-        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
-        if railway_domain:
-            base_url = f"https://{railway_domain}"
-            
-    if not base_url:
-        logger.error("BASE_URL yoki RAILWAY_PUBLIC_DOMAIN topilmadi!")
+        logger.error("BASE_URL environment variable topilmadi! InsForge secrets ichida BASE_URL ni o'rnating.")
         return False
 
     webhook_url = f"{base_url}/bot/{token}"
@@ -145,6 +140,41 @@ async def unregister_restaurant_bot(token: str) -> bool:
         logger.info(f"Bot o'chirildi: {token[:10]}...")
         return True
     return False
+
+
+async def disconnect_restaurant_bot(owner_id: int) -> bool:
+    """
+    Restoran egasi botini to'liq uzadi:
+    1. DB dan restaurant yozuvini o'chiradi.
+    2. active_bots / active_dps dan chiqaradi.
+    3. Telegram webhookini o'chiradi.
+    Muvaffaqiyatli bo'lsa True, aks holda False qaytaradi.
+    """
+    from database import async_session
+    from sqlalchemy.future import select
+    from sqlalchemy import delete
+    from models import Restaurant
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(Restaurant).where(Restaurant.owner_id == owner_id)
+        )
+        restaurant = result.scalar_one_or_none()
+
+        if not restaurant:
+            logger.warning(f"disconnect_restaurant_bot: owner_id={owner_id} uchun restoran topilmadi.")
+            return False
+
+        token = restaurant.bot_token
+
+        # DB dan o'chirish
+        await session.delete(restaurant)
+        await session.commit()
+        logger.info(f"Restaurant DB dan o'chirildi: owner_id={owner_id}")
+
+    # Serverdan o'chirish (xotira + webhook)
+    await unregister_restaurant_bot(token)
+    return True
 
 
 # ── Server ishga tushganda barcha botlarni yuklash ────────────────────
