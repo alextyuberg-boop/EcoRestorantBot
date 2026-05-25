@@ -2,6 +2,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import WebApp from '@twa-dev/sdk'
+import { LanguageProvider } from './context/LanguageContext.tsx'
 
 const tg = (WebApp as any).default || WebApp;
 
@@ -22,7 +23,9 @@ if (!rootElement) {
   console.error("main.tsx: Root element not found!");
 } else {
   ReactDOM.createRoot(rootElement).render(
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   );
 }
 

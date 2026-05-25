@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 const tg = (WebApp as any).default || WebApp;
 import { api } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Restaurants() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen]   = useState(false);
   const [restaurantName, setRestaurantName] = useState('');
@@ -38,10 +40,10 @@ export default function Restaurants() {
       setIsModalOpen(false);
       setRestaurantName('');
       setBotToken('');
-      tg.showAlert("Restoran muvaffaqiyatli qo'shildi!");
+      tg.showAlert(t('rest_success_add'));
       fetchRestaurants();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Xatolik yuz berdi. Bot tokenini tekshiring.');
+      setError(err.response?.data?.detail || t('rest_error_add'));
     } finally {
       setLoading(false);
     }
@@ -54,10 +56,10 @@ export default function Restaurants() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--color-text)' }}>
-            Restoranlarim
+            {t('rest_title')}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginTop: 2 }}>
-            {restaurants.length} ta restoran
+            {restaurants.length} {t('rest_count_suffix')}
           </p>
         </div>
         <button onClick={() => setIsModalOpen(true)} style={{
@@ -66,7 +68,7 @@ export default function Restaurants() {
           borderRadius: 'var(--radius-md)',
           fontWeight: 700,
         }}>
-          <Plus size={16} /> Qo'shish
+          <Plus size={16} /> {t('rest_add_btn')}
         </button>
       </div>
 
@@ -95,10 +97,10 @@ export default function Restaurants() {
             <UtensilsCrossed size={28} />
           </div>
           <p style={{ color: 'var(--color-text-3)', fontSize: 14, marginBottom: 20 }}>
-            Sizda hali restoranlar yo'q
+            {t('rest_empty_title')}
           </p>
           <button onClick={() => setIsModalOpen(true)} style={{ fontSize: 14, padding: '12px 24px' }}>
-            Birinchi restoranni qo'shish
+            {t('rest_empty_btn')}
           </button>
         </div>
       ) : (
@@ -147,7 +149,7 @@ export default function Restaurants() {
 
                 {/* Status + Actions */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                  <span className="badge badge-online">Online</span>
+                  <span className="badge badge-online">{t('rest_online')}</span>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <button 
                       onClick={() => navigate(`/manage/${res.id}`)}
@@ -169,13 +171,12 @@ export default function Restaurants() {
                       onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
                     >
                       <Settings size={13} />
-                      Boshqarish
+                      {t('rest_manage')}
                     </button>
                     <button 
                       className="btn-icon" 
                       style={{ width: 32, height: 32 }}
                       onClick={() => window.open(`https://t.me/${res.bot_username || 'eco_bot'}`, '_blank')}
-                      title="Botni Telegramda ochish"
                     >
                       <ExternalLink size={14} />
                     </button>
@@ -186,7 +187,7 @@ export default function Restaurants() {
                         background: 'rgba(255,68,68,0.06)',
                         borderRadius: 'var(--radius-sm)',
                       }}
-                      onClick={() => tg.showAlert("Xavfsizlik yuzasidan restoranni o'chirish faqat tizim administratori orqali amalga oshiriladi.")}
+                      onClick={() => tg.showAlert(t('rest_delete_warn'))}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -202,7 +203,7 @@ export default function Restaurants() {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
                 <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>
-                  0 ta buyurtma bugun
+                  0 {t('rest_orders_today')}
                 </span>
                 <span style={{
                   fontFamily: 'var(--font-mono)',
@@ -210,7 +211,7 @@ export default function Restaurants() {
                   fontWeight: 700,
                   color: 'var(--color-primary)',
                 }}>
-                  0 UZS
+                  0 {t('dash_sum')}
                 </span>
               </div>
             </div>
@@ -254,10 +255,10 @@ export default function Restaurants() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
               <div>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700 }}>
-                  Yangi Restoran
+                  {t('rest_modal_title')}
                 </h3>
                 <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginTop: 4 }}>
-                  Bot va restoran ma'lumotlarini kiriting
+                  {t('rest_modal_desc')}
                 </p>
               </div>
               <button className="btn-icon" onClick={() => setIsModalOpen(false)}>
@@ -268,11 +269,11 @@ export default function Restaurants() {
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>
-                  Restoran Nomi
+                  {t('rest_modal_name')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Masalan: Rayhon Milliy Taomlar"
+                  placeholder={t('rest_modal_name')}
                   value={restaurantName}
                   onChange={(e) => setRestaurantName(e.target.value)}
                   required
@@ -280,17 +281,17 @@ export default function Restaurants() {
               </div>
               <div>
                 <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>
-                  Telegram Bot Token
+                  {t('rest_modal_token')}
                 </label>
                 <input
                   type="password"
-                  placeholder="@BotFather'dan olingan token"
+                  placeholder={t('rest_modal_token')}
                   value={botToken}
                   onChange={(e) => setBotToken(e.target.value)}
                   required
                 />
                 <p style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 6 }}>
-                  * Har bir restoran uchun alohida bot tavsiya etiladi
+                  {t('rest_modal_tip')}
                 </p>
               </div>
 
@@ -303,7 +304,7 @@ export default function Restaurants() {
                 disabled={loading}
                 style={{ width: '100%', marginTop: 8, padding: '15px 24px' }}
               >
-                {loading ? <Loader2 size={20} className="animate-spin" /> : 'Saqlash va Ulanish'}
+                {loading ? <Loader2 size={20} className="animate-spin" /> : t('rest_save_connect')}
               </button>
             </form>
           </div>

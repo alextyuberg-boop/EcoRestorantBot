@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
@@ -52,18 +53,14 @@ platform_dp.include_router(start_router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Jadvallarni yaratish (agar yo'q bo'lsa)
+    # 1. Jadvallarni yaratish (agar yo'q bo'lsa) va static uploads papka yaratish
+    os.makedirs("static/uploads", exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database jadvallari tekshirildi.")
 
     # 2. Bot 1 webhook o'rnatish
     base_url = os.getenv("BASE_URL")
-    if not base_url:
-        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
-        if railway_domain:
-            base_url = f"https://{railway_domain}"
-
     if base_url:
         webhook_url = f"{base_url}/bot1/webhook"
         await platform_bot.set_webhook(webhook_url)
@@ -86,7 +83,8 @@ async def lifespan(app: FastAPI):
         polling_task.cancel()
 
 
-# ── FastAPI app ────────────────────────────────────────────────────────
+# Ensure static uploads directory exists before mounting
+os.makedirs("static/uploads", exist_ok=True)
 
 app = FastAPI(
     title="EcoRestaurant Platform API",
@@ -94,14 +92,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — Mini App (Vercel) uchun
+# CORS — Mini App (InsForge frontend) uchun
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,  # If using allow_origins=["*"], allow_credentials must be False
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static files mounting
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── API Routerlar ──────────────────────────────────────────────────────
 

@@ -156,14 +156,14 @@ async def get_owner(telegram_id: int):
         result = await session.execute(
             select(RestaurantOwner).where(RestaurantOwner.telegram_id == telegram_id)
         )
-        owner = result.scalar_one_or_none()
+        owner = result.scalars().first()
 
         restaurant = None
         if owner:
             res_result = await session.execute(
                 select(Restaurant).where(Restaurant.owner_id == telegram_id)
             )
-            restaurant = res_result.scalar_one_or_none()
+            restaurant = res_result.scalars().first()
 
     return owner, restaurant
 
@@ -196,6 +196,15 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
     if owner:
         # Allaqachon ro'yxatdan o'tgan — asosiy menyuni ko'rsat
         lang = get_lang(owner)
+        if not owner.phone:
+            await message.answer(
+                PHONE_REQUEST[lang],
+                reply_markup=phone_keyboard(lang),
+                parse_mode="HTML"
+            )
+            await state.set_state(OnboardingStates.phone)
+            return
+
         await message.answer(
             MAIN_MENU_TEXT[lang],
             reply_markup=main_menu_keyboard(lang),
@@ -258,7 +267,7 @@ async def process_language(callback: types.CallbackQuery, state: FSMContext):
         result = await session.execute(
             select(RestaurantOwner).where(RestaurantOwner.telegram_id == callback.from_user.id)
         )
-        owner = result.scalar_one_or_none()
+        owner = result.scalars().first()
 
         if not owner:
             owner = RestaurantOwner(
@@ -284,14 +293,14 @@ async def process_language(callback: types.CallbackQuery, state: FSMContext):
 
 # ── Til o'zgartirish (asosiy menyudan) ────────────────────────────────
 
-@router.callback_query(F.data == "menu_change_lang")
-async def cb_change_language(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
+@router.message(F.text.in_(["🌐 Til o'zgartirish", "🌐 Сменить язык", "🌐 Change Language"]))
+@router.message(Command("change_lang"))
+async def msg_change_language(message: types.Message, state: FSMContext):
+    await message.answer(
         "🌐 Tilni tanlang:\n\nВыберите язык:\n\nChoose language:",
         reply_markup=lang_keyboard()
     )
     await state.set_state(OnboardingStates.change_lang)
-    await callback.answer()
 
 
 @router.callback_query(OnboardingStates.change_lang, F.data.startswith("lang_"))
@@ -302,13 +311,14 @@ async def process_language_change(callback: types.CallbackQuery, state: FSMConte
         result = await session.execute(
             select(RestaurantOwner).where(RestaurantOwner.telegram_id == callback.from_user.id)
         )
-        owner = result.scalar_one_or_none()
+        owner = result.scalars().first()
         if owner:
             owner.language = UserLanguage[lang]
             await session.commit()
 
     await state.clear()
-    await callback.message.edit_text(
+    await callback.message.delete()
+    await callback.message.answer(
         MAIN_MENU_TEXT[lang],
         reply_markup=main_menu_keyboard(lang),
         parse_mode="HTML"
@@ -326,7 +336,7 @@ async def process_phone(message: types.Message, state: FSMContext):
         result = await session.execute(
             select(RestaurantOwner).where(RestaurantOwner.telegram_id == message.from_user.id)
         )
-        owner = result.scalar_one_or_none()
+        owner = result.scalars().first()
 
         if owner:
             owner.phone = phone
@@ -335,8 +345,6 @@ async def process_phone(message: types.Message, state: FSMContext):
         else:
             lang = "uz"
 
-    # ReplyKeyboard'ni olib tashlab, asosiy menyuni ko'rsat
-    await message.answer("✅", reply_markup=remove_keyboard())
     await message.answer(
         MAIN_MENU_TEXT[lang],
         reply_markup=main_menu_keyboard(lang),
@@ -355,33 +363,47 @@ async def process_phone_wrong(message: types.Message, state: FSMContext):
 
 # ── Asosiy menyu: "Restoranim" ─────────────────────────────────────────
 
-@router.callback_query(F.data == "menu_restaurant")
-async def cb_my_restaurant(callback: types.CallbackQuery, state: FSMContext):
-    owner, restaurant = await get_owner(callback.from_user.id)
+@router.message(F.text.in_(["🏪 Restoranim", "🏪 Мой restoran", "🏪 My Restaurant", "🏪 Мой ресторан"]))
+@router.message(Command("my_restaurant"))
+async def msg_my_restaurant(message: types.Message, state: FSMContext):
+    owner, restaurant = await get_owner(message.from_user.id)
     lang = get_lang(owner)
 
     if restaurant:
+        # Telegram API orqali bot tokeni haqiqatda mavjudligini tekshiramiz
+        from bot_manager import validate_bot_token
+        if restaurant.bot_token.startswith("disconnected_"):
+            bot_info = None
+        else:
+            bot_info = await validate_bot_token(restaurant.bot_token)
+
+        if not bot_info:
+            # Bot Telegram'dan o'chirilgan! Avtomatik uzib tashlaymiz
+            from bot_manager import disconnect_restaurant_bot
+            await disconnect_restaurant_bot(message.from_user.id)
+            # Qaytadan yuklaymiz
+            owner, restaurant = await get_owner(message.from_user.id)
+
+    if restaurant and not restaurant.bot_token.startswith("disconnected_"):
         # Bot ulangan holat
         text = RESTAURANT_CONNECTED_TEXT[lang].format(
             name=restaurant.name,
             username=restaurant.bot_username or "—"
         )
-        await callback.message.edit_text(
+        await message.answer(
             text,
             reply_markup=restaurant_connected_keyboard(lang),
             parse_mode="HTML"
         )
     else:
         # Bot ulanmagan holat — instruksiya va token so'rash
-        await callback.message.edit_text(
+        await message.answer(
             NO_RESTAURANT_TEXT[lang],
             reply_markup=no_restaurant_keyboard(lang),
             parse_mode="HTML"
         )
         await state.set_state(OnboardingStates.bot_token)
         await state.update_data(lang=lang)
-
-    await callback.answer()
 
 
 # ── Ortga (asosiy menyu) ───────────────────────────────────────────────
@@ -392,7 +414,8 @@ async def cb_menu_back(callback: types.CallbackQuery, state: FSMContext):
     owner, _ = await get_owner(callback.from_user.id)
     lang = get_lang(owner)
 
-    await callback.message.edit_text(
+    await callback.message.delete()
+    await callback.message.answer(
         MAIN_MENU_TEXT[lang],
         reply_markup=main_menu_keyboard(lang),
         parse_mode="HTML"
@@ -430,7 +453,7 @@ async def process_bot_token(message: types.Message, state: FSMContext):
         result = await session.execute(
             select(Restaurant).where(Restaurant.bot_token == token)
         )
-        existing = result.scalar_one_or_none()
+        existing = result.scalars().first()
 
         if existing:
             if existing.owner_id != message.from_user.id:
@@ -472,14 +495,22 @@ async def process_bot_token(message: types.Message, state: FSMContext):
 
 @router.callback_query(F.data == "restaurant_disconnect")
 async def cb_disconnect_bot(callback: types.CallbackQuery, state: FSMContext):
+    # Telegram loading spinneri aylanib qolmasligi uchun callbackni tezda tasdiqlaymiz
+    await callback.answer()
+    
     owner, _ = await get_owner(callback.from_user.id)
     lang = get_lang(owner)
 
     from bot_manager import disconnect_restaurant_bot
     success = await disconnect_restaurant_bot(callback.from_user.id)
 
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logger.warning(f"Failed to delete callback message: {e}")
+    
     if success:
-        await callback.message.edit_text(
+        await callback.message.answer(
             DISCONNECT_SUCCESS[lang],
             parse_mode="HTML"
         )
@@ -490,10 +521,70 @@ async def cb_disconnect_bot(callback: types.CallbackQuery, state: FSMContext):
             parse_mode="HTML"
         )
     else:
-        await callback.message.edit_text(
+        await callback.message.answer(
             DISCONNECT_ERROR[lang],
             parse_mode="HTML"
         )
 
     await state.clear()
-    await callback.answer()
+
+
+@router.message(Command("disconnect"))
+async def cmd_disconnect(message: types.Message, state: FSMContext):
+    owner, restaurant = await get_owner(message.from_user.id)
+    if not owner or not restaurant:
+        return
+        
+    lang = get_lang(owner)
+    from bot_manager import disconnect_restaurant_bot
+    success = await disconnect_restaurant_bot(message.from_user.id)
+    
+    if success:
+        await message.answer(
+            DISCONNECT_SUCCESS[lang],
+            parse_mode="HTML"
+        )
+        await message.answer(
+            MAIN_MENU_TEXT[lang],
+            reply_markup=main_menu_keyboard(lang),
+            parse_mode="HTML"
+        )
+    else:
+        await message.answer(
+            DISCONNECT_ERROR[lang],
+            parse_mode="HTML"
+        )
+    await state.clear()
+
+
+@router.message(Command("reset"))
+async def cmd_reset(message: types.Message, state: FSMContext):
+    await state.clear()
+    
+    # 1. Disconnect any connected restaurant bot (removes from active list, webhook, and db table)
+    from bot_manager import disconnect_restaurant_bot
+    try:
+        await disconnect_restaurant_bot(message.from_user.id)
+    except Exception as e:
+        logger.warning(f"Error during disconnect in reset command: {e}")
+
+    # 2. Delete RestaurantOwner record from database
+    async with async_session() as session:
+        from sqlalchemy import delete
+        await session.execute(
+            delete(RestaurantOwner).where(RestaurantOwner.telegram_id == message.from_user.id)
+        )
+        await session.commit()
+
+    # 3. Inform the user they are fully reset and can start from scratch
+    await message.answer(
+        "🔄 <b>Profilingiz bazadan butunlay tozalandi!</b>\n\n"
+        "Endi botni yangi foydalanuvchi sifatida boshidan sinab ko'rish uchun qaytadan /start yuboring.\n\n"
+        "🔄 <b>Ваш профиль успешно удален из базы данных!</b>\n\n"
+        "Теперь отправьте /start еще раз, чтобы протестировать бота с самого начала как новый пользователь.\n\n"
+        "🔄 <b>Your profile has been fully cleared from the database!</b>\n\n"
+        "Now send /start again to test the bot from the very beginning as a new user.",
+        reply_markup=remove_keyboard(),
+        parse_mode="HTML"
+    )
+

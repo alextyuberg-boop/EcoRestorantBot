@@ -94,12 +94,17 @@ def get_start_router(restaurant_id: int) -> Router:
                 "Menyuni ko'rish va zakaz berish uchun pastdagi tugmani bosing:"
             )
 
-        if restaurant.logo_file_id and not is_owner:
-            await message.answer_photo(
-                restaurant.logo_file_id,
-                caption=greeting,
-                reply_markup=kb
-            )
+        logo_to_send = restaurant.logo_file_id or restaurant.logo_url
+        if logo_to_send:
+            try:
+                await message.answer_photo(
+                    logo_to_send,
+                    caption=greeting,
+                    reply_markup=kb
+                )
+            except Exception as e:
+                logger.error(f"Failed to send logo photo: {e}")
+                await message.answer(greeting, reply_markup=kb)
         else:
             await message.answer(greeting, reply_markup=kb)
 

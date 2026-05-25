@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, UtensilsCrossed, Settings, Bell } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface LayoutProps {
   user: any;
@@ -8,11 +9,12 @@ interface LayoutProps {
 export default function Layout({ user }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   const navItems = [
-    { path: '/',            icon: LayoutDashboard, label: 'Asosiy' },
-    { path: '/restaurants', icon: UtensilsCrossed, label: 'Restoranlar' },
-    { path: '/settings',    icon: Settings,        label: 'Sozlamalar' },
+    { path: '/',            icon: LayoutDashboard, label: t('nav_home') },
+    { path: '/restaurants', icon: UtensilsCrossed, label: t('nav_restaurants') },
+    { path: '/settings',    icon: Settings,        label: t('nav_settings') },
   ];
 
   return (

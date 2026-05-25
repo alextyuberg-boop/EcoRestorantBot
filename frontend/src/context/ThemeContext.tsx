@@ -39,17 +39,17 @@ export interface ThemeTokens {
 }
 
 export const DARK_TOKENS: Omit<ThemeTokens, 'accent' | 'accentText' | 'accentBg' | 'accentBgStrong'> = {
-  bg:            '#0A0A0A',
-  bgCard:        '#111111',
-  bgElevated:    '#1A1A1A',
-  bgOverlay:     'rgba(17,17,17,0.92)',
+  bg:            '#000000',
+  bgCard:        '#09090A',
+  bgElevated:    '#121213',
+  bgOverlay:     'rgba(0,0,0,0.95)',
   text:          '#FFFFFF',
   textMuted:     '#AAAAAA',
   textFaint:     '#555555',
-  border:        '#2A2A2A',
-  borderStrong:  '#3A3A3A',
-  shadow:        '0 4px 24px rgba(0,0,0,0.5)',
-  headerBg:      'rgba(17,17,17,0.88)',
+  border:        '#1E1E20',
+  borderStrong:  '#2B2B2E',
+  shadow:        '0 4px 24px rgba(0,0,0,0.8)',
+  headerBg:      'rgba(0,0,0,0.88)',
 };
 
 export const LIGHT_TOKENS: Omit<ThemeTokens, 'accent' | 'accentText' | 'accentBg' | 'accentBgStrong'> = {

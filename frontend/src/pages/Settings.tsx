@@ -5,14 +5,10 @@ import {
 } from 'lucide-react';
 import { updateOwnerProfile } from '../api';
 import WebApp from '@twa-dev/sdk';
+import { useLanguage } from '../context/LanguageContext';
+import type { LanguageCode } from '../context/LanguageContext';
 
 const tg = (WebApp as any).default || WebApp;
-
-const langCodeToLabel: Record<string, string> = {
-  uz: "O'zbekcha",
-  ru: "Русский",
-  en: "English"
-};
 
 const langLabelToCode: Record<string, string> = {
   "O'zbekcha": "uz",
@@ -57,14 +53,12 @@ const MenuRow = ({ icon: Icon, label, sub, danger = false, onClick }: {
 );
 
 export default function Settings() {
+  const { t, language: currentLangCode, setLanguage: setGlobalLanguage } = useLanguage();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  
-  const localLangCode = localStorage.getItem('language') || 'uz';
-  const [language, setLanguage] = useState(langCodeToLabel[localLangCode] || "O'zbekcha");
 
   useEffect(() => {
     (async () => {
@@ -76,9 +70,7 @@ export default function Settings() {
           setPhone(data.phone || '');
           setCardNumber(data.card_number || '');
           if (data.language) {
-            const mappedLang = langCodeToLabel[data.language] || "O'zbekcha";
-            setLanguage(mappedLang);
-            localStorage.setItem('language', data.language);
+            setGlobalLanguage(data.language as LanguageCode);
           }
         }
       } catch (err) {
@@ -93,7 +85,6 @@ export default function Settings() {
     e.preventDefault();
     setLoading(true);
     try {
-      const currentLangCode = langLabelToCode[language] || 'uz';
       const data = await updateOwnerProfile({
         full_name: fullName,
         phone: phone,
@@ -101,11 +92,11 @@ export default function Settings() {
         language: currentLangCode,
       });
       if (data) {
-        tg.showAlert("Profil ma'lumotlaringiz muvaffaqiyatli saqlandi!");
+        tg.showAlert(t('settings_save_success'));
       }
     } catch (err: any) {
       console.error(err);
-      tg.showAlert(err.response?.data?.detail || "Saqlashda xatolik yuz berdi.");
+      tg.showAlert(err.response?.data?.detail || t('settings_save_error'));
     } finally {
       setLoading(false);
     }
@@ -117,17 +108,17 @@ export default function Settings() {
       {/* ── Title ── */}
       <div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--color-text)' }}>
-          Sozlamalar
+          {t('settings_title')}
         </h2>
         <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginTop: 3 }}>
-          Hisobingiz va to'lov sozlamalarini boshqaring
+          {t('settings_sub')}
         </p>
       </div>
 
       {fetching ? (
         <div className="card" style={{ padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <Loader2 className="animate-spin" size={24} color="var(--color-primary)" />
-          <span style={{ marginLeft: 10, fontSize: 14, color: 'var(--color-text-3)' }}>Yuklanmoqda...</span>
+          <span style={{ marginLeft: 10, fontSize: 14, color: 'var(--color-text-3)' }}>{t('dash_loading')}</span>
         </div>
       ) : (
         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -189,7 +180,7 @@ export default function Settings() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 1 }}>
               <div style={{ minWidth: 0, flex: 1, marginRight: 16 }}>
                 <div style={{ fontSize: 8, textTransform: 'uppercase', opacity: 0.6, letterSpacing: '0.05em', fontWeight: 600 }}>
-                  Karta Egasi
+                  {t('settings_card_holder')}
                 </div>
                 <div style={{ 
                   fontSize: 14, 
@@ -205,7 +196,7 @@ export default function Settings() {
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontSize: 8, textTransform: 'uppercase', opacity: 0.6, letterSpacing: '0.05em', fontWeight: 600 }}>
-                  Telefon
+                  {t('settings_card_phone')}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
                   {phone || '+998 •• ••• •• ••'}
@@ -216,17 +207,17 @@ export default function Settings() {
 
           {/* Profile Card / Form inputs */}
           <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="label-muted" style={{ marginBottom: 4 }}>Profil & To'lov ma'lumotlari</div>
+            <div className="label-muted" style={{ marginBottom: 4 }}>{t('settings_profile_title')}</div>
             
             {/* Full Name */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-text-3)', marginBottom: 6 }}>
-                Foydalanuvchi ismi
+                {t('settings_owner_name')}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   type="text"
-                  placeholder="Masalan: Sardor Komilov"
+                  placeholder={t('settings_owner_name')}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
@@ -239,7 +230,7 @@ export default function Settings() {
             {/* Phone */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-text-3)', marginBottom: 6 }}>
-                Telefon raqami
+                {t('settings_phone')}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -256,7 +247,7 @@ export default function Settings() {
             {/* Card Number */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-text-3)', marginBottom: 6 }}>
-                Pul tushadigan karta raqami (Buyurtmalar uchun)
+                {t('settings_card')}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -272,7 +263,7 @@ export default function Settings() {
                 <CreditCard size={16} color="var(--color-text-3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
               </div>
               <p style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 6 }}>
-                * Mijoz buyurtma berganida ushbu kartaga pul o'tkazish tavsiya etiladi
+                {t('settings_card_tip')}
               </p>
             </div>
 
@@ -300,7 +291,7 @@ export default function Settings() {
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <>
-                  <Save size={18} /> Saqlash
+                  <Save size={18} /> {t('settings_save_btn')}
                 </>
               )}
             </button>
@@ -310,43 +301,45 @@ export default function Settings() {
 
       {/* ── Language card ── */}
       <div className="card" style={{ padding: '16px 20px' }}>
-        <div className="label-muted" style={{ marginBottom: 14 }}>Til sozlamalari</div>
+        <div className="label-muted" style={{ marginBottom: 14 }}>{t('settings_language_title')}</div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {["O'zbekcha", "Русский", "English"].map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              className={language === lang ? 'tag active' : 'tag'}
-              style={{ fontSize: 13 }}
-              onClick={async () => {
-                setLanguage(lang);
-                const code = langLabelToCode[lang] || 'uz';
-                localStorage.setItem('language', code);
-                try {
-                  await updateOwnerProfile({ language: code });
-                  tg.showAlert(`Til ${lang} rejimiga o'zgartirildi.`);
-                } catch (err) {
-                  console.error("Failed to update language on server:", err);
-                  tg.showAlert("Serverga tilni saqlashda xatolik.");
-                }
-              }}
-            >
-              {lang}
-            </button>
-          ))}
+          {["O'zbekcha", "Русский", "English"].map((lang) => {
+            const code = langLabelToCode[lang];
+            const isActive = currentLangCode === code;
+            return (
+              <button
+                key={lang}
+                type="button"
+                className={isActive ? 'tag active' : 'tag'}
+                style={{ fontSize: 13 }}
+                onClick={async () => {
+                  setGlobalLanguage(code as LanguageCode);
+                  try {
+                    await updateOwnerProfile({ language: code });
+                    const alertMsg = code === 'uz' ? "Til O'zbekcha rejimiga o'zgartirildi." : code === 'ru' ? "Язык изменен на Русский." : "Language changed to English.";
+                    tg.showAlert(alertMsg);
+                  } catch (err) {
+                    console.error("Failed to update language on server:", err);
+                  }
+                }}
+              >
+                {lang}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ── Menu List ── */}
       <div className="card" style={{ padding: '4px 20px' }}>
-        <MenuRow icon={Bell}    label="Bildirishnomalar" sub="Push va tovush sozlamalari" onClick={() => tg.showAlert("Tez orada faollashtiriladi.")} />
-        <MenuRow icon={HelpCircle} label="Yordam markazi" sub="FAQ va texnik qo'llab-quvvatlash" onClick={() => tg.openTelegramLink("https://t.me/EcoRestorant_Bot?start=help")} />
+        <MenuRow icon={Bell}    label={t('settings_notifications')} sub={t('settings_notif_sub')} onClick={() => tg.showAlert(t('settings_notif_alert'))} />
+        <MenuRow icon={HelpCircle} label={t('settings_help_center')} sub={t('settings_help_sub')} onClick={() => tg.openTelegramLink("https://t.me/EcoRestorant_Bot?start=help")} />
       </div>
 
       {/* ── Danger ── */}
       <div className="card" style={{ padding: '4px 20px', borderColor: 'rgba(255,68,68,0.15)' }}>
-        <MenuRow icon={LogOut} label="Chiqish" danger onClick={() => {
-          tg.showAlert("Hisobdan chiqildi.");
+        <MenuRow icon={LogOut} label={t('settings_logout')} danger onClick={() => {
+          tg.showAlert(t('settings_logout_alert'));
         }} />
       </div>
 

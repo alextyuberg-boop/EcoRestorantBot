@@ -54,7 +54,7 @@ async def set_bot_webhook(token: str) -> bool:
     api_url = f"https://api.telegram.org/bot{token}/setWebhook"
 
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
             async with session.post(api_url, json={"url": webhook_url}) as resp:
                 data = await resp.json()
                 if data.get("ok"):
@@ -71,7 +71,7 @@ async def delete_bot_webhook(token: str) -> bool:
     """Bot webhookini o'chiradi (masalan, bot o'chirilganda)."""
     api_url = f"https://api.telegram.org/bot{token}/deleteWebhook"
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
             async with session.post(api_url) as resp:
                 data = await resp.json()
                 return data.get("ok", False)
@@ -145,21 +145,21 @@ async def unregister_restaurant_bot(token: str) -> bool:
 async def disconnect_restaurant_bot(owner_id: int) -> bool:
     """
     Restoran egasi botini to'liq uzadi:
-    1. DB dan restaurant yozuvini o'chiradi.
+    1. DB dan restaurant yozuvini o'chiradi. Agar xatolik bo'lsa (buyurtmalar tufayli), tokenlarni tozalaydi.
     2. active_bots / active_dps dan chiqaradi.
     3. Telegram webhookini o'chiradi.
     Muvaffaqiyatli bo'lsa True, aks holda False qaytaradi.
     """
     from database import async_session
     from sqlalchemy.future import select
-    from sqlalchemy import delete
     from models import Restaurant
 
+    token = None
     async with async_session() as session:
         result = await session.execute(
             select(Restaurant).where(Restaurant.owner_id == owner_id)
         )
-        restaurant = result.scalar_one_or_none()
+        restaurant = result.scalars().first()
 
         if not restaurant:
             logger.warning(f"disconnect_restaurant_bot: owner_id={owner_id} uchun restoran topilmadi.")
@@ -167,13 +167,30 @@ async def disconnect_restaurant_bot(owner_id: int) -> bool:
 
         token = restaurant.bot_token
 
-        # DB dan o'chirish
-        await session.delete(restaurant)
-        await session.commit()
-        logger.info(f"Restaurant DB dan o'chirildi: owner_id={owner_id}")
+        try:
+            # DB dan to'liq o'chirishga harakat qilamiz
+            await session.delete(restaurant)
+            await session.commit()
+            logger.info(f"Restaurant DB dan o'chirildi: owner_id={owner_id}")
+        except Exception as e:
+            logger.warning(f"Restaurant o'chirishda cheklovlar yuz berdi (faol buyurtmalar bo'lishi mumkin), bot ma'lumotlarini tozalaymiz: {e}")
+            await session.rollback()
+            # Bot tokenini va usernameini tozalab qo'yamiz (token unique va non-nullable bo'lgani uchun random qilamiz)
+            import os
+            result = await session.execute(
+                select(Restaurant).where(Restaurant.owner_id == owner_id)
+            )
+            restaurant = result.scalars().first()
+            if restaurant:
+                restaurant.bot_token = f"disconnected_{owner_id}_{os.urandom(4).hex()}"
+                restaurant.bot_username = None
+                restaurant.is_active = False
+                await session.commit()
+                logger.info(f"Restaurant bot ma'lumotlari tozalandi (soft-disconnect): owner_id={owner_id}")
 
     # Serverdan o'chirish (xotira + webhook)
-    await unregister_restaurant_bot(token)
+    if token:
+        await unregister_restaurant_bot(token)
     return True
 
 

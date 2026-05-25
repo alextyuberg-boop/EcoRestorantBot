@@ -3,6 +3,7 @@ import {
   UtensilsCrossed, TrendingUp, Wallet,
   ShoppingCart, ChefHat, Plus, ArrowRight
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DashboardProps { user: any; }
 
@@ -41,6 +42,7 @@ const StatCard = ({
 
 export default function Dashboard({ user }: DashboardProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -72,7 +74,7 @@ export default function Dashboard({ user }: DashboardProps) {
           }}>
             <Wallet size={18} />
           </div>
-          <span className="label-muted">Mening Hisobim</span>
+          <span className="label-muted">{t('dash_my_account')}</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -91,7 +93,7 @@ export default function Dashboard({ user }: DashboardProps) {
             fontSize: 14,
             fontWeight: 600,
             color: 'var(--color-primary-mid)',
-          }}>UZS</span>
+          }}>{t('dash_sum')}</span>
         </div>
 
         <div style={{ marginTop: 16 }}>
@@ -100,23 +102,23 @@ export default function Dashboard({ user }: DashboardProps) {
             fontSize: 13,
             borderRadius: 'var(--radius-sm)',
           }}>
-            Hisobni to'ldirish
+            {t('dash_top_up_btn')}
           </button>
         </div>
       </div>
 
       {/* ── Stats Grid ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <StatCard label="Buyurtmalar" value="0" sub="Bugun" icon={ShoppingCart} />
-        <StatCard label="Daromad" value="0" sub="Bugun, UZS" icon={TrendingUp} />
-        <StatCard label="Aktiv" value="0" sub="Hozir tayyorlanmoqda" icon={ChefHat} />
-        <StatCard label="O'rtacha chek" value="0" sub="UZS" icon={Wallet} />
+        <StatCard label={t('dash_received_orders')} value="0" sub={t('dash_today')} icon={ShoppingCart} />
+        <StatCard label={t('dash_total_revenue')} value="0" sub={`${t('dash_today')}, ${t('dash_sum')}`} icon={TrendingUp} />
+        <StatCard label={t('dash_active_orders')} value="0" sub={t('dash_preparing')} icon={ChefHat} />
+        <StatCard label={t('dash_avg_check')} value="0" sub={t('dash_sum')} icon={Wallet} />
       </div>
 
       {/* ── Divider ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div className="divider" style={{ flex: 1, margin: 0 }} />
-        <span className="label-muted">Boshqaruv</span>
+        <span className="label-muted">{t('dash_control')}</span>
         <div className="divider" style={{ flex: 1, margin: 0 }} />
       </div>
 
@@ -145,10 +147,10 @@ export default function Dashboard({ user }: DashboardProps) {
               color: 'var(--color-text)',
               marginBottom: 3,
             }}>
-              Mening Restoranlarim
+              {t('rest_title')}
             </div>
             <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>
-              Filiallarni boshqarish va qo'shish
+              {t('rest_sub')}
             </div>
           </div>
           <div style={{
@@ -167,10 +169,10 @@ export default function Dashboard({ user }: DashboardProps) {
       {/* ── Quick Actions ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {[
-          { label: 'Menyu qo\'shish', icon: Plus },
-          { label: 'Statistika', icon: TrendingUp },
-        ].map(({ label, icon: Icon }) => (
-          <button key={label} className="btn-ghost" style={{
+          { label: t('dash_add_menu'), icon: Plus, onClick: () => navigate('/restaurants') },
+          { label: t('dash_stats'), icon: TrendingUp, onClick: () => {} },
+        ].map(({ label, icon: Icon, onClick }) => (
+          <button key={label} onClick={onClick} className="btn-ghost" style={{
             padding: '14px 12px',
             fontSize: 13,
             borderRadius: 'var(--radius-md)',

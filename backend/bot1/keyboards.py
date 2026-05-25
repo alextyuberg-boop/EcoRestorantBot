@@ -71,12 +71,12 @@ def remove_keyboard() -> ReplyKeyboardRemove:
 
 # ── Asosiy menyu ───────────────────────────────────────────────────────
 
-def main_menu_keyboard(lang: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=t("my_restaurant_btn", lang), callback_data="menu_restaurant")],
-            [InlineKeyboardButton(text=t("change_lang_btn", lang),   callback_data="menu_change_lang")],
-        ]
+def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=t("my_restaurant_btn", lang)), KeyboardButton(text=t("change_lang_btn", lang))]
+        ],
+        resize_keyboard=True
     )
 
 

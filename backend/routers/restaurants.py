@@ -1,5 +1,8 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+import shutil
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -95,4 +98,33 @@ async def update_restaurant(
     # If bot token changes or status changes, we could re-register in bot_manager,
     # but here they are just updating branding and settings.
     return restaurant
+
+
+@router.post("/upload")
+async def upload_restaurant_file(
+    request: Request,
+    file: UploadFile = File(...),
+    owner: RestaurantOwner = Depends(get_current_owner)
+):
+    # Ensure static directory exists
+    os.makedirs("static/uploads", exist_ok=True)
+    
+    # Validate file extension
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+        raise HTTPException(status_code=400, detail="Faqat rasm fayllari yuklanishi mumkin (.jpg, .png, .webp, etc.)")
+        
+    # Generate unique filename
+    filename = f"{uuid.uuid4()}{ext}"
+    filepath = os.path.join("static", "uploads", filename)
+    
+    # Save the file
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    # Generate complete URL using request.base_url
+    base_url = str(request.base_url).rstrip("/")
+    file_url = f"{base_url}/static/uploads/{filename}"
+    
+    return {"url": file_url}
 

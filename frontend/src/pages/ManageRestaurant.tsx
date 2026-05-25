@@ -11,13 +11,18 @@ import {
   getRestaurant, updateRestaurantSettings,
   getAdminCategories, createAdminCategory, deleteAdminCategory,
   getAdminItems, createAdminItem, updateAdminItem, deleteAdminItem,
-  getAdminOrders, updateOrderStatus
+  getAdminOrders, updateOrderStatus, uploadFile
 } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ManageRestaurant() {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const navigate = useNavigate();
   const rid = parseInt(restaurantId || '0');
+  
+  const { t, language } = useLanguage();
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingItemPhoto, setUploadingItemPhoto] = useState(false);
 
   // Core loading states
   const [restaurant, setRestaurant] = useState<any>(null);
@@ -260,6 +265,38 @@ export default function ManageRestaurant() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingLogo(true);
+      const res = await uploadFile(file);
+      setSettingsForm(prev => ({ ...prev, logo_url: res.url }));
+      tg.showAlert("Logo muvaffaqiyatli yuklandi!");
+    } catch (err: any) {
+      console.error(err);
+      tg.showAlert(err.response?.data?.detail || "Rasm yuklashda xatolik yuz berdi.");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleItemPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingItemPhoto(true);
+      const res = await uploadFile(file);
+      setItemForm(prev => ({ ...prev, image_url: res.url }));
+      tg.showAlert("Taom rasmi muvaffaqiyatli yuklandi!");
+    } catch (err: any) {
+      console.error(err);
+      tg.showAlert(err.response?.data?.detail || "Rasm yuklashda xatolik yuz berdi.");
+    } finally {
+      setUploadingItemPhoto(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: 16 }}>
@@ -297,10 +334,10 @@ export default function ManageRestaurant() {
         scrollbarWidth: 'none'
       }}>
         {[
-          { id: 'orders', label: 'Buyurtmalar', icon: ClipboardList },
-          { id: 'categories', label: 'Kategoriyalar', icon: FolderOpen },
-          { id: 'items', label: 'Menyu/Taomlar', icon: Utensils },
-          { id: 'settings', label: 'Branding', icon: Settings },
+          { id: 'orders', label: t('tab_orders'), icon: ClipboardList },
+          { id: 'categories', label: t('tab_categories'), icon: FolderOpen },
+          { id: 'items', label: t('tab_items'), icon: Utensils },
+          { id: 'settings', label: t('tab_settings'), icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -423,23 +460,26 @@ export default function ManageRestaurant() {
         {/* ──────── TABS 2: CATEGORIES ──────── */}
         {activeTab === 'categories' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <span className="label-muted">{t('cats_title')}</span>
             {/* Form */}
             <form onSubmit={handleAddCategory} className="card" style={{ display: 'flex', gap: 10, padding: 12 }}>
               <input 
                 type="text" 
-                placeholder="Yangi kategoriya (Masalan: Kaboblar)"
+                placeholder={t('cats_name_placeholder')}
                 value={newCatName}
                 onChange={e => setNewCatName(e.target.value)}
                 style={{ flex: 1, padding: '10px 14px', fontSize: 14 }}
               />
-              <button type="submit" style={{ padding: '0 16px', borderRadius: 'var(--radius-md)', fontSize: 13 }}>
-                <Plus size={16} /> Qo'shish
+              <button type="submit" style={{ padding: '0 16px', borderRadius: 'var(--radius-md)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Plus size={16} /> {t('cats_add_btn')}
               </button>
             </form>
 
             {/* List */}
             {categories.length === 0 ? (
-              <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--color-text-3)', padding: 30 }}>Kategoriyalar yo'q.</p>
+              <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--color-text-3)', padding: 30 }}>
+                {language === 'en' ? 'No categories yet.' : language === 'ru' ? 'Категорий пока нет.' : 'Kategoriyalar hali yo\'q.'}
+              </p>
             ) : (
               <div className="card" style={{ padding: '4px 16px' }}>
                 {categories.map((cat, i) => (
@@ -472,16 +512,20 @@ export default function ManageRestaurant() {
         {activeTab === 'items' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="label-muted">{items.length} ta taom</span>
-              <button onClick={() => openItemModal(null)} style={{ padding: '8px 14px', fontSize: 12 }}>
-                <Plus size={14} /> Yangi Taom
+              <span className="label-muted">
+                {language === 'en' ? `${items.length} dishes` : language === 'ru' ? `${items.length} блюд` : `${items.length} ta taom`}
+              </span>
+              <button onClick={() => openItemModal(null)} style={{ padding: '8px 14px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Plus size={14} /> {t('items_new')}
               </button>
             </div>
 
             {items.length === 0 ? (
               <div style={{ padding: '40px 24px', textAlign: 'center', background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)' }}>
                 <Utensils size={36} color="var(--color-text-3)" style={{ margin: '0 auto 12px' }} />
-                <p style={{ fontSize: 14, color: 'var(--color-text-3)' }}>Taomlar mavjud emas. Yangi taom kiriting.</p>
+                <p style={{ fontSize: 14, color: 'var(--color-text-3)' }}>
+                  {language === 'en' ? 'No dishes available yet. Add a new dish.' : language === 'ru' ? 'Блюд пока нет. Добавьте первое блюдо.' : 'Taomlar mavjud emas. Yangi taom kiriting.'}
+                </p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -505,19 +549,19 @@ export default function ManageRestaurant() {
                           </span>
                           {!item.is_available && (
                             <span className="badge" style={{ background: 'rgba(255,68,68,0.1)', color: '#FF4444', fontSize: 8, padding: '2px 6px' }}>
-                              Faolmas
+                              {language === 'en' ? 'Inactive' : language === 'ru' ? 'Неактивно' : 'Faolmas'}
                             </span>
                           )}
                         </div>
                         <p style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>
-                          {categories.find(c => c.id === item.category_id)?.name || 'Kategoriyasiz'}
+                          {categories.find(c => c.id === item.category_id)?.name || (language === 'en' ? 'Uncategorized' : language === 'ru' ? 'Без категории' : 'Kategoriyasiz')}
                         </p>
                       </div>
 
                       {/* Price & Actions */}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14, color: 'var(--color-primary)' }}>
-                          {Number(item.price).toLocaleString()} so'm
+                          {Number(item.price).toLocaleString()} {t('dash_sum')}
                         </span>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button 
@@ -548,7 +592,7 @@ export default function ManageRestaurant() {
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveSettings} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20 }}>
             <div>
-              <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>Restoran Nomi</label>
+              <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>{t('rest_name')}</label>
               <input 
                 type="text" 
                 value={settingsForm.name} 
@@ -558,7 +602,7 @@ export default function ManageRestaurant() {
             </div>
             
             <div>
-              <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>Manzil (Address)</label>
+              <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>{t('rest_address')}</label>
               <input 
                 type="text" 
                 value={settingsForm.address} 
@@ -569,7 +613,7 @@ export default function ManageRestaurant() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>Minimal Buyurtma (so'm)</label>
+                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>{t('rest_min_order_form')}</label>
                 <input 
                   type="number" 
                   value={settingsForm.min_order} 
@@ -578,7 +622,7 @@ export default function ManageRestaurant() {
                 />
               </div>
               <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>Yetkazib Berish Narxi (so'm)</label>
+                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>{t('rest_delivery_fee')}</label>
                 <input 
                   type="number" 
                   value={settingsForm.delivery_fee} 
@@ -590,7 +634,7 @@ export default function ManageRestaurant() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>Ish Boshlanishi ("09:00")</label>
+                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>{t('rest_working_start')} ("09:00")</label>
                 <input 
                   type="text" 
                   value={settingsForm.working_start} 
@@ -599,7 +643,7 @@ export default function ManageRestaurant() {
                 />
               </div>
               <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>Ish Tugashi ("22:00")</label>
+                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>{t('rest_working_end')} ("22:00")</label>
                 <input 
                   type="text" 
                   value={settingsForm.working_end} 
@@ -611,41 +655,73 @@ export default function ManageRestaurant() {
 
             {/* Branding - Theme and Color Presets */}
             <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <span className="label-muted" style={{ display: 'block', marginBottom: 4 }}>Brending Sozlamalari</span>
+              <span className="label-muted" style={{ display: 'block', marginBottom: 4 }}>{t('rest_branding_title')}</span>
               
               <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>Logo Havolasi (Logo URL)</label>
-                <input 
-                  type="text" 
-                  value={settingsForm.logo_url} 
-                  onChange={e => setSettingsForm({ ...settingsForm, logo_url: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                />
+                <label className="label-muted" style={{ display: 'block', marginBottom: 8 }}>{t('rest_logo_url')}</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input 
+                    type="text" 
+                    value={settingsForm.logo_url} 
+                    onChange={e => setSettingsForm({ ...settingsForm, logo_url: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    style={{ flex: 1 }}
+                  />
+                  <label className="btn" style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    padding: '0 16px',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--color-surface-2)',
+                    border: '1px solid var(--color-border)'
+                  }}>
+                    {uploadingLogo ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      t('rest_logo_upload')
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleLogoUpload}
+                      disabled={uploadingLogo}
+                    />
+                  </label>
+                </div>
+                {settingsForm.logo_url && (
+                  <div style={{ marginTop: 10, position: 'relative', width: 80, height: 80, borderRadius: 12, border: '1px solid var(--color-border)', background: `url(${settingsForm.logo_url}) center/cover` }} />
+                )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontSize: 14, fontWeight: 500 }}>Ilova Mavzusi (Theme)</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 10 }}>
+                <span style={{ fontSize: 14, fontWeight: 500 }}>{t('rest_theme')}</span>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[
-                    { id: 'dark', label: 'Qora (Dark)' },
-                    { id: 'light', label: 'Oq (Light)' },
-                    { id: 'green', label: 'Yashil (Green)' }
-                  ].map(t => (
+                    { id: 'dark', label: language === 'en' ? 'Dark' : language === 'ru' ? 'Темная' : 'Qora (Dark)' },
+                    { id: 'light', label: language === 'en' ? 'Light' : language === 'ru' ? 'Светлая' : 'Oq (Light)' },
+                    { id: 'green', label: language === 'en' ? 'Green' : language === 'ru' ? 'Зеленая' : 'Yashil (Green)' }
+                  ].map(tInfo => (
                     <button
                       type="button"
-                      key={t.id}
-                      onClick={() => setSettingsForm({ ...settingsForm, theme: t.id })}
-                      className={settingsForm.theme === t.id ? 'tag active' : 'tag'}
+                      key={tInfo.id}
+                      onClick={() => setSettingsForm({ ...settingsForm, theme: tInfo.id })}
+                      className={settingsForm.theme === tInfo.id ? 'tag active' : 'tag'}
                       style={{ fontSize: 11, padding: '6px 10px' }}
                     >
-                      {t.label}
+                      {tInfo.label}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Asosiy Rang (Branding Accent)</label>
+                <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>{t('rest_accent')}</label>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   {[
                     { hex: '#00E561', name: 'Neon Green' },
@@ -675,7 +751,7 @@ export default function ManageRestaurant() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-              <span style={{ fontSize: 13, color: 'var(--color-text-3)' }}>Restoran holati</span>
+              <span style={{ fontSize: 13, color: 'var(--color-text-3)' }}>{t('rest_is_active')}</span>
               <button
                 type="button"
                 className={settingsForm.is_active ? 'tag active' : 'tag'}
@@ -683,15 +759,19 @@ export default function ManageRestaurant() {
                 style={{ fontSize: 12, display: 'flex', gap: 4 }}
               >
                 {settingsForm.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
-                <span>{settingsForm.is_active ? 'Faol (Online)' : 'O\'chirilgan (Offline)'}</span>
+                <span>
+                  {settingsForm.is_active 
+                    ? (language === 'en' ? 'Active (Online)' : language === 'ru' ? 'Активен (Онлайн)' : 'Faol (Online)') 
+                    : (language === 'en' ? 'Disabled (Offline)' : language === 'ru' ? 'Отключен (Офлайн)' : 'O\'chirilgan (Offline)')}
+                </span>
               </button>
             </div>
 
             <button 
               type="submit" 
-              style={{ width: '100%', padding: '14px 24px', marginTop: 12 }}
+              style={{ width: '100%', padding: '14px 24px', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
-              <Save size={16} /> Sozlamalarni Saqlash
+              <Save size={16} /> {language === 'en' ? 'Save Settings' : language === 'ru' ? 'Сохранить настройки' : 'Sozlamalarni Saqlash'}
             </button>
           </form>
         )}
@@ -822,11 +902,11 @@ export default function ManageRestaurant() {
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--color-border)', margin: '0 auto 12px' }} />
             
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-              {editingItem ? "Taomni Tahrirlash" : "Yangi Taom Qo'shish"}
+              {editingItem ? t('items_edit') : t('items_new')}
             </h3>
 
             <div>
-              <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>Nomi</label>
+              <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>{t('items_name')}</label>
               <input 
                 type="text" 
                 value={itemForm.name} 
@@ -836,60 +916,134 @@ export default function ManageRestaurant() {
             </div>
 
             <div>
-              <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>Tavsif (Description)</label>
+              <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>{t('items_desc')}</label>
               <textarea 
                 value={itemForm.description} 
                 onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
-                placeholder="Masalan: Tovuq go'shti, pishloq, maxsus sous va sarsabil bilan."
+                placeholder={language === 'en' ? 'e.g. Delicious grilled chicken with special sauce.' : language === 'ru' ? 'Например: Вкусная курица-гриль со специальным соусом.' : 'Masalan: Tovuq go\'shti, pishloq, maxsus sous bilan.'}
                 style={{ height: 60 }}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>Narxi (so'm)</label>
-                <input 
-                  type="number" 
-                  value={itemForm.price || ''} 
-                  onChange={e => setItemForm({ ...itemForm, price: Number(e.target.value) })}
-                  required
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>Kategoriya</label>
-                <select 
-                  value={itemForm.category_id}
-                  onChange={e => setItemForm({ ...itemForm, category_id: e.target.value })}
-                  required
+            {categories.length === 0 ? (
+              <div style={{
+                background: 'rgba(255, 150, 0, 0.08)',
+                border: '1px solid rgba(255, 150, 0, 0.25)',
+                padding: '16px 20px',
+                borderRadius: 'var(--radius-lg)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                alignItems: 'center',
+                textAlign: 'center',
+                boxShadow: '0 0 16px rgba(255, 150, 0, 0.05)',
+                margin: '6px 0'
+              }}>
+                <span style={{ fontSize: 13, color: '#FFB03A', fontWeight: 500, lineHeight: 1.5 }}>
+                  {t('items_no_cat_warn')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsItemModalOpen(false);
+                    setActiveTab('categories');
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: 12,
+                    background: 'var(--color-primary)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: 'var(--glow-sm)'
+                  }}
                 >
-                  <option value="">Tanlang...</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                  {t('items_go_cat_btn')}
+                </button>
               </div>
-            </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>{t('items_price')}</label>
+                  <input 
+                    type="number" 
+                    value={itemForm.price || ''} 
+                    onChange={e => setItemForm({ ...itemForm, price: Number(e.target.value) })}
+                    required
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>{t('items_cat')}</label>
+                  <select 
+                    value={itemForm.category_id}
+                    onChange={e => setItemForm({ ...itemForm, category_id: e.target.value })}
+                    required
+                  >
+                    <option value="">{language === 'en' ? 'Choose...' : language === 'ru' ? 'Выбрать...' : 'Tanlang...'}</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
 
             <div>
-              <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>Rasm havolasi (Image URL)</label>
-              <input 
-                type="text" 
-                value={itemForm.image_url} 
-                onChange={e => setItemForm({ ...itemForm, image_url: e.target.value })}
-                placeholder="https://example.com/food.jpg"
-              />
+              <label className="label-muted" style={{ display: 'block', marginBottom: 6 }}>{t('items_image')}</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input 
+                  type="text" 
+                  value={itemForm.image_url} 
+                  onChange={e => setItemForm({ ...itemForm, image_url: e.target.value })}
+                  placeholder="https://example.com/food.jpg"
+                  style={{ flex: 1 }}
+                />
+                <label className="btn" style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '0 16px',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-surface-2)',
+                  border: '1px solid var(--color-border)'
+                }}>
+                  {uploadingItemPhoto ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    t('items_upload_btn')
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleItemPhotoUpload}
+                    disabled={uploadingItemPhoto}
+                  />
+                </label>
+              </div>
+              {itemForm.image_url && (
+                <div style={{ marginTop: 10, width: 80, height: 80, borderRadius: 12, border: '1px solid var(--color-border)', background: `url(${itemForm.image_url}) center/cover` }} />
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-              <span style={{ fontSize: 13, color: 'var(--color-text-2)' }}>Hozir sotuvda bormi?</span>
+              <span style={{ fontSize: 13, color: 'var(--color-text-2)' }}>{t('items_available')}</span>
               <button
                 type="button"
                 className={itemForm.is_available ? 'tag active' : 'tag'}
                 onClick={() => setItemForm({ ...itemForm, is_available: !itemForm.is_available })}
                 style={{ fontSize: 12 }}
               >
-                {itemForm.is_available ? 'Mavjud (Available)' : 'Tugagan (Unavailable)'}
+                {itemForm.is_available 
+                  ? (language === 'en' ? 'Yes (Available)' : language === 'ru' ? 'Да (Доступно)' : 'Mavjud') 
+                  : (language === 'en' ? 'No (Sold Out)' : language === 'ru' ? 'Нет (Закончилось)' : 'Tugagan')}
               </button>
             </div>
 
@@ -900,13 +1054,14 @@ export default function ManageRestaurant() {
                 style={{ flex: 1, padding: '12px' }}
                 onClick={() => setIsItemModalOpen(false)}
               >
-                Bekor Qilish
+                {t('items_cancel')}
               </button>
               <button 
                 type="submit" 
                 style={{ flex: 1, padding: '12px' }}
+                disabled={categories.length === 0}
               >
-                <Save size={14} /> Saqlash
+                <Save size={14} /> {language === 'en' ? 'Save' : language === 'ru' ? 'Сохранить' : 'Saqlash'}
               </button>
             </div>
           </form>
